@@ -1,79 +1,181 @@
-// Terminal simple intégré
-class SimpleTerminal {
+// Multi-Terminal Manager
+class TerminalManager {
     constructor(container) {
         this.container = container;
-        this.output = null;
-        this.input = null;
-        this.currentDir = process.cwd();
-        this.history = [];
-        this.historyIndex = -1;
+        this.terminals = [];
+        this.activeTerminalIndex = -1;
+        this.terminalCounter = 0;
         this.init();
     }
 
     init() {
         this.container.innerHTML = `
             <div class="terminal-header">
-                <span class="terminal-title">Terminal</span>
-                <button class="terminal-close" onclick="toggleTerminal()">×</button>
+                <div class="terminal-tabs" id="terminal-tabs"></div>
+                <div class="terminal-actions">
+                    <button class="terminal-action-btn" onclick="window.terminalManager.createTerminal()" title="New Terminal">+</button>
+                    <button class="terminal-close" onclick="toggleTerminal()">×</button>
+                </div>
             </div>
-            <div class="terminal-output" id="terminal-output"></div>
+            <div class="terminal-content" id="terminal-content"></div>
+        `;
+        
+        this.createTerminal();
+    }
+
+    createTerminal(initialDir = null) {
+        this.terminalCounter++;
+        const terminalId = this.terminalCounter;
+        const dir = initialDir || (window.currentFolder ? window.currentFolder.path : process.cwd());
+        
+        const terminal = {
+            id: terminalId,
+            name: `Terminal ${terminalId}`,
+            currentDir: dir,
+            history: [],
+            historyIndex: -1,
+            output: [],
+            element: null
+        };
+        
+        this.terminals.push(terminal);
+        this.switchToTerminal(this.terminals.length - 1);
+        this.updateTabs();
+        
+        return terminal;
+    }
+
+    switchToTerminal(index) {
+        if (index < 0 || index >= this.terminals.length) return;
+        
+        this.activeTerminalIndex = index;
+        this.renderTerminal();
+        this.updateTabs();
+    }
+
+    closeTerminal(index) {
+        if (this.terminals.length <= 1) {
+            // Don't close the last terminal, just clear it
+            this.terminals[0].output = [];
+            this.terminals[0].history = [];
+            this.renderTerminal();
+            return;
+        }
+        
+        this.terminals.splice(index, 1);
+        
+        if (this.activeTerminalIndex >= this.terminals.length) {
+            this.activeTerminalIndex = this.terminals.length - 1;
+        }
+        
+        this.renderTerminal();
+        this.updateTabs();
+    }
+
+    updateTabs() {
+        const tabsContainer = document.getElementById('terminal-tabs');
+        if (!tabsContainer) return;
+        
+        tabsContainer.innerHTML = '';
+        
+        this.terminals.forEach((terminal, index) => {
+            const tab = document.createElement('div');
+            tab.className = `terminal-tab ${index === this.activeTerminalIndex ? 'active' : ''}`;
+            tab.innerHTML = `
+                <span class="terminal-tab-name" onclick="window.terminalManager.switchToTerminal(${index})">${terminal.name}</span>
+                <span class="terminal-tab-close" onclick="event.stopPropagation(); window.terminalManager.closeTerminal(${index})">×</span>
+            `;
+            tabsContainer.appendChild(tab);
+        });
+    }
+
+    renderTerminal() {
+        const content = document.getElementById('terminal-content');
+        if (!content) return;
+        
+        const terminal = this.terminals[this.activeTerminalIndex];
+        if (!terminal) return;
+        
+        content.innerHTML = `
+            <div class="terminal-output" id="terminal-output-${terminal.id}"></div>
             <div class="terminal-input-container">
-                <span class="terminal-prompt">${this.currentDir}></span>
-                <input type="text" class="terminal-input" id="terminal-input" placeholder="Type a command...">
+                <span class="terminal-prompt" id="terminal-prompt-${terminal.id}">${terminal.currentDir}></span>
+                <input type="text" class="terminal-input" id="terminal-input-${terminal.id}" placeholder="Type a command...">
             </div>
         `;
-
-        this.output = document.getElementById('terminal-output');
-        this.input = document.getElementById('terminal-input');
-
-        this.input.addEventListener('keydown', (e) => this.handleKeyDown(e));
-
-        this.printWelcome();
+        
+        const output = document.getElementById(`terminal-output-${terminal.id}`);
+        const input = document.getElementById(`terminal-input-${terminal.id}`);
+        
+        // Restore output history
+        terminal.output.forEach(line => {
+            const lineEl = document.createElement('div');
+            lineEl.className = `terminal-line terminal-${line.type}`;
+            lineEl.textContent = line.text;
+            output.appendChild(lineEl);
+        });
+        
+        // Print welcome if new terminal
+        if (terminal.output.length === 0) {
+            this.print(terminal.id, 'ByteCode Terminal v1.0.0', 'info');
+            this.print(terminal.id, `Current directory: ${terminal.currentDir}`, 'info');
+            this.print(terminal.id, 'Type "help" for available commands\n', 'info');
+        }
+        
+        output.scrollTop = output.scrollHeight;
+        
+        input.addEventListener('keydown', (e) => this.handleKeyDown(e, terminal));
+        input.focus();
     }
 
-    printWelcome() {
-        this.print('ByteCode Terminal v1.0.0', 'info');
-        this.print(`Current directory: ${this.currentDir}`, 'info');
-        this.print('Type "help" for available commands\n', 'info');
+    print(terminalId, text, type = 'normal') {
+        const terminal = this.terminals.find(t => t.id === terminalId);
+        if (!terminal) return;
+        
+        terminal.output.push({ text, type });
+        
+        const output = document.getElementById(`terminal-output-${terminalId}`);
+        if (output) {
+            const line = document.createElement('div');
+            line.className = `terminal-line terminal-${type}`;
+            line.textContent = text;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        }
     }
 
-    print(text, type = 'normal') {
-        const line = document.createElement('div');
-        line.className = `terminal-line terminal-${type}`;
-        line.textContent = text;
-        this.output.appendChild(line);
-        this.output.scrollTop = this.output.scrollHeight;
-    }
-
-    handleKeyDown(e) {
+    handleKeyDown(e, terminal) {
+        const input = document.getElementById(`terminal-input-${terminal.id}`);
+        if (!input) return;
+        
         if (e.key === 'Enter') {
-            const command = this.input.value.trim();
+            const command = input.value.trim();
             if (command) {
-                this.history.push(command);
-                this.historyIndex = this.history.length;
-                this.executeCommand(command);
-                this.input.value = '';
+                terminal.history.push(command);
+                terminal.historyIndex = terminal.history.length;
+                this.executeCommand(terminal, command);
+                input.value = '';
             }
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
-            if (this.historyIndex > 0) {
-                this.historyIndex--;
-                this.input.value = this.history[this.historyIndex];
+            if (terminal.historyIndex > 0) {
+                terminal.historyIndex--;
+                input.value = terminal.history[terminal.historyIndex];
             }
         } else if (e.key === 'ArrowDown') {
             e.preventDefault();
-            if (this.historyIndex < this.history.length - 1) {
-                this.historyIndex++;
-                this.input.value = this.history[this.historyIndex];
+            if (terminal.historyIndex < terminal.history.length - 1) {
+                terminal.historyIndex++;
+                input.value = terminal.history[terminal.historyIndex];
             } else {
-                this.historyIndex = this.history.length;
-                this.input.value = '';
+                terminal.historyIndex = terminal.history.length;
+                input.value = '';
             }
         }
     }
 
-    executeCommand(command) {
-        this.print(`${this.currentDir}> ${command}`, 'command');
+    executeCommand(terminal, command) {
+        this.print(terminal.id, `${terminal.currentDir}> ${command}`, 'command');
 
         const parts = command.split(' ');
         const cmd = parts[0].toLowerCase();
@@ -81,50 +183,78 @@ class SimpleTerminal {
 
         switch (cmd) {
             case 'help':
-                this.showHelp();
+                this.showHelp(terminal.id);
                 break;
             case 'clear':
-                this.output.innerHTML = '';
+            case 'cls':
+                terminal.output = [];
+                const output = document.getElementById(`terminal-output-${terminal.id}`);
+                if (output) output.innerHTML = '';
                 break;
             case 'cd':
-                this.changeDirectory(args[0]);
+                this.changeDirectory(terminal, args[0]);
                 break;
             case 'dir':
             case 'ls':
-                this.listDirectory();
+                this.listDirectory(terminal);
                 break;
             case 'pwd':
-                this.print(this.currentDir);
+                this.print(terminal.id, terminal.currentDir);
                 break;
             case 'echo':
-                this.print(args.join(' '));
+                this.print(terminal.id, args.join(' '));
                 break;
-            case 'node':
-                this.runNodeCommand(args);
-                break;
-            case 'npm':
-                this.runNpmCommand(args);
+            case 'exit':
+                this.closeTerminal(this.activeTerminalIndex);
                 break;
             default:
-                this.print(`Command not found: ${cmd}. Type "help" for available commands.`, 'error');
+                this.runSystemCommand(terminal, command);
         }
     }
 
-    showHelp() {
-        this.print('Available commands:', 'info');
-        this.print('  help          - Show this help message');
-        this.print('  clear         - Clear the terminal');
-        this.print('  cd <dir>      - Change directory');
-        this.print('  ls / dir      - List directory contents');
-        this.print('  pwd           - Print working directory');
-        this.print('  echo <text>   - Print text');
-        this.print('  node <file>   - Run a Node.js file');
-        this.print('  npm <command> - Run npm command');
+    runSystemCommand(terminal, command) {
+        const { ipcRenderer } = require('electron');
+        
+        this.print(terminal.id, 'Executing...', 'info');
+        
+        ipcRenderer.send('execute-terminal-command', {
+            command: command,
+            cwd: terminal.currentDir
+        });
+
+        ipcRenderer.once('terminal-command-result', (event, result) => {
+            if (result.error) {
+                this.print(terminal.id, result.error, 'error');
+            } else {
+                if (result.stdout) {
+                    result.stdout.split('\n').forEach(line => {
+                        if (line.trim()) this.print(terminal.id, line, 'success');
+                    });
+                }
+                if (result.stderr) {
+                    result.stderr.split('\n').forEach(line => {
+                        if (line.trim()) this.print(terminal.id, line, 'error');
+                    });
+                }
+            }
+        });
     }
 
-    changeDirectory(dir) {
+    showHelp(terminalId) {
+        this.print(terminalId, 'Available commands:', 'info');
+        this.print(terminalId, '  help          - Show this help message');
+        this.print(terminalId, '  clear / cls   - Clear the terminal');
+        this.print(terminalId, '  cd <dir>      - Change directory');
+        this.print(terminalId, '  ls / dir      - List directory contents');
+        this.print(terminalId, '  pwd           - Print working directory');
+        this.print(terminalId, '  echo <text>   - Print text');
+        this.print(terminalId, '  exit          - Close this terminal');
+        this.print(terminalId, '  Any other command will be executed in the system shell');
+    }
+
+    changeDirectory(terminal, dir) {
         if (!dir) {
-            this.print('Usage: cd <directory>', 'error');
+            this.print(terminal.id, 'Usage: cd <directory>', 'error');
             return;
         }
 
@@ -132,95 +262,88 @@ class SimpleTerminal {
         const fsSync = require('fs');
 
         let newPath;
-        if (pathModule.isAbsolute(dir)) {
+        if (dir === '~') {
+            newPath = require('os').homedir();
+        } else if (pathModule.isAbsolute(dir)) {
             newPath = dir;
         } else {
-            newPath = pathModule.join(this.currentDir, dir);
+            newPath = pathModule.resolve(terminal.currentDir, dir);
         }
 
-        if (fsSync.existsSync(newPath) && fsSync.statSync(newPath).isDirectory()) {
-            this.currentDir = newPath;
-            document.querySelector('.terminal-prompt').textContent = `${this.currentDir}>`;
-            this.print(`Changed directory to: ${this.currentDir}`, 'success');
-        } else {
-            this.print(`Directory not found: ${dir}`, 'error');
+        try {
+            if (fsSync.existsSync(newPath) && fsSync.statSync(newPath).isDirectory()) {
+                terminal.currentDir = newPath;
+                const prompt = document.getElementById(`terminal-prompt-${terminal.id}`);
+                if (prompt) prompt.textContent = `${terminal.currentDir}>`;
+                this.print(terminal.id, `Changed directory to: ${terminal.currentDir}`, 'success');
+            } else {
+                this.print(terminal.id, `Directory not found: ${dir}`, 'error');
+            }
+        } catch (err) {
+            this.print(terminal.id, `Error: ${err.message}`, 'error');
         }
     }
 
-    listDirectory() {
+    listDirectory(terminal) {
         const fsSync = require('fs');
         const pathModule = require('path');
 
         try {
-            const items = fsSync.readdirSync(this.currentDir);
-            this.print(`\nDirectory: ${this.currentDir}\n`, 'info');
+            const items = fsSync.readdirSync(terminal.currentDir);
+            this.print(terminal.id, `\nDirectory: ${terminal.currentDir}\n`, 'info');
 
             items.forEach(item => {
-                const fullPath = pathModule.join(this.currentDir, item);
-                const stats = fsSync.statSync(fullPath);
-                const type = stats.isDirectory() ? '<DIR>' : '     ';
-                const size = stats.isDirectory() ? '' : `${stats.size} bytes`;
-                this.print(`${type}  ${item.padEnd(30)} ${size}`);
+                try {
+                    const fullPath = pathModule.join(terminal.currentDir, item);
+                    const stats = fsSync.statSync(fullPath);
+                    const type = stats.isDirectory() ? '<DIR>' : '     ';
+                    const size = stats.isDirectory() ? '' : this.formatSize(stats.size);
+                    this.print(terminal.id, `${type}  ${item.padEnd(35)} ${size}`);
+                } catch (e) {
+                    this.print(terminal.id, `      ${item.padEnd(35)} <access denied>`);
+                }
             });
 
-            this.print('');
+            this.print(terminal.id, '');
         } catch (err) {
-            this.print(`Error listing directory: ${err.message}`, 'error');
+            this.print(terminal.id, `Error listing directory: ${err.message}`, 'error');
         }
     }
 
-    runNodeCommand(args) {
-        if (args.length === 0) {
-            this.print('Usage: node <file.js>', 'error');
-            return;
-        }
-
-        const { spawn } = require('child_process');
-        const pathModule = require('path');
-
-        const filePath = pathModule.join(this.currentDir, args[0]);
-        const nodeProcess = spawn('node', [filePath], { cwd: this.currentDir });
-
-        nodeProcess.stdout.on('data', (data) => {
-            this.print(data.toString(), 'success');
-        });
-
-        nodeProcess.stderr.on('data', (data) => {
-            this.print(data.toString(), 'error');
-        });
-
-        nodeProcess.on('close', (code) => {
-            this.print(`Process exited with code ${code}`, 'info');
-        });
-    }
-
-    runNpmCommand(args) {
-        if (args.length === 0) {
-            this.print('Usage: npm <command>', 'error');
-            return;
-        }
-
-        const { spawn } = require('child_process');
-        const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-        const npmProcess = spawn(npmCmd, args, { cwd: this.currentDir, shell: true });
-
-        npmProcess.stdout.on('data', (data) => {
-            this.print(data.toString(), 'success');
-        });
-
-        npmProcess.stderr.on('data', (data) => {
-            this.print(data.toString(), 'error');
-        });
-
-        npmProcess.on('close', (code) => {
-            this.print(`npm exited with code ${code}`, 'info');
-        });
+    formatSize(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+        return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
     }
 
     focus() {
-        this.input.focus();
+        const terminal = this.terminals[this.activeTerminalIndex];
+        if (terminal) {
+            const input = document.getElementById(`terminal-input-${terminal.id}`);
+            if (input) input.focus();
+        }
+    }
+
+    reset() {
+        this.terminals = [];
+        this.activeTerminalIndex = -1;
+        this.terminalCounter = 0;
+        this.init();
+    }
+
+    destroy() {
+        this.terminals = [];
+        this.activeTerminalIndex = -1;
     }
 }
 
-// Export pour utilisation
-window.SimpleTerminal = SimpleTerminal;
+// Export for use
+window.TerminalManager = TerminalManager;
+
+// Function to reset terminals (called when folder changes)
+window.resetTerminals = function() {
+    if (window.terminalManager) {
+        window.terminalManager.reset();
+    }
+};

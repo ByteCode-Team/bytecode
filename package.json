@@ -1,8 +1,34 @@
 {
   "name": "bytecode",
-  "version": "1.0.0",
-  "description": "IDE moderne avec Monaco Editor",
+  "version": "0.0.1",
+  "preview": true,
+  "description": "A no VS Code based IDE by the ByteCode-Team. Thanks to Lololegeek, is the foundator of ByteCode-Team and ByteCode",
   "displayName": "ByteCode",
+  "repository": "https://github.com/ByteCode-Team/bytecode",
+  "homepage": "https://github.com/ByteCode-Team/bytecode",
+  "pricing": "Free",
+  "bugs": "https://github.com/ByteCode-Team/bytecode/issues",
+  "maintainer": "ByteCode Team",
+  "maintainers": [
+    {
+      "name": "ByteCode Team",
+      "url": "https://github.com/ByteCode-Team"
+    },
+    {
+      "name": "Lololegeek",
+      "url": "https://github.com/Lololegeek"
+    }
+  ],
+  "contributors": [
+    {
+      "name": "Lololegeek",
+      "url": "https://github.com/Lololegeek"
+    },
+    {
+      "name": "ByteCode Team",
+      "url": "https://github.com/ByteCode-Team"
+    }
+  ],
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -11,6 +37,9 @@
   "keywords": [
     "electron",
     "ide",
+    "VS Code",
+    "ByteCode",
+    "ByteCode-Team",
     "monaco",
     "editor"
   ],

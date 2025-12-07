@@ -3,9 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self';">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data:; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; media-src 'self' file:; frame-src 'self' file:; worker-src 'self' blob: data:;">
     <title>ByteCode</title>
     <style>
         * {
@@ -60,7 +60,7 @@
             object-fit: contain;
         }
 
-        .titlebar-title {
+        .titleba r-title {
             font-size: 16px;
             font-weight: 600;
             color: white;
@@ -120,10 +120,127 @@
             padding: 4px 8px;
             border-radius: 4px;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .sidebar-btn:hover {
             background: #3e3e42;
+        }
+
+        .sidebar-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Sidebar Resizer */
+        .sidebar-resizer {
+            width: 4px;
+            background: transparent;
+            cursor: col-resize;
+            transition: background 0.2s;
+        }
+
+        .sidebar-resizer:hover,
+        .sidebar-resizer.resizing {
+            background: #007acc;
+        }
+
+        /* Context Menu */
+        .context-menu {
+            display: none;
+            position: fixed;
+            background: #252526;
+            border: 1px solid #454545;
+            border-radius: 6px;
+            min-width: 180px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            z-index: 3000;
+            padding: 6px 0;
+        }
+
+        .context-menu.visible {
+            display: block;
+        }
+
+        .context-item {
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #cccccc;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .context-item:hover {
+            background: #094771;
+            color: white;
+        }
+
+        .context-item svg {
+            opacity: 0.8;
+        }
+
+        .context-separator {
+            height: 1px;
+            background: #454545;
+            margin: 6px 0;
+        }
+
+        /* Input Modal */
+        .modal-small {
+            width: 400px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: #3c3c3c;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: #007acc;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .modal-btn.primary {
+            background: #007acc;
+            color: white;
+        }
+
+        .modal-btn.primary:hover {
+            background: #0062a3;
+        }
+
+        .modal-btn.secondary {
+            background: #3c3c3c;
+            color: #cccccc;
+        }
+
+        .modal-btn.secondary:hover {
+            background: #4a4a4a;
         }
 
         .folder-tree {
@@ -170,7 +287,17 @@
         .tree-icon {
             font-size: 14px;
             width: 16px;
+            height: 16px;
             text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .tree-icon svg {
+            width: 16px;
+            height: 16px;
         }
 
         .tree-arrow {
@@ -387,6 +514,334 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #4e4e4e;
         }
+
+        /* Menu Bar */
+        .menubar {
+            display: flex;
+            margin-left: 10px;
+            -webkit-app-region: no-drag;
+        }
+
+        .menu-item {
+            padding: 4px 10px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #cccccc;
+            position: relative;
+        }
+
+        .menu-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            color: white;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #252526;
+            border: 1px solid #454545;
+            border-radius: 4px;
+            min-width: 200px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            padding: 4px 0;
+        }
+
+        .menu-item:hover .dropdown-menu {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 6px 16px;
+            display: flex;
+            justify-content: space-between;
+            color: #cccccc;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .dropdown-item:hover {
+            background: #094771;
+            color: white;
+        }
+
+        .dropdown-separator {
+            height: 1px;
+            background: #454545;
+            margin: 4px 0;
+        }
+
+        .shortcut {
+            color: #858585;
+            font-size: 12px;
+        }
+
+        /* Preview
+ Container */
+        #preview-container {
+            flex: 1;
+            display: none;
+            background: #1e1e1e;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+            flex-direction: column;
+        }
+
+        #preview-content {
+            max-width: 90%;
+            max-height: 90%;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .preview-msg {
+            margin-top: 20px;
+            color: #858585;
+        }
+
+        /* Terminal */
+        #terminal-container {
+            height: 250px;
+            background: #1e1e1e;
+            border-top: 1px solid #3e3e42;
+            display: none;
+            flex-direction: column;
+        }
+
+        .terminal-header {
+            padding: 0;
+            background: #252526;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #3e3e42;
+            height: 35px;
+        }
+
+        .terminal-tabs {
+            display: flex;
+            flex: 1;
+            overflow-x: auto;
+            gap: 2px;
+            padding: 0 5px;
+        }
+
+        .terminal-tab {
+            display: flex;
+            align-items: center;
+            padding: 6px 12px;
+            background: transparent;
+            color: #858585;
+            font-size: 12px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .terminal-tab:hover {
+            background: #2a2d2e;
+            color: #cccccc;
+        }
+
+        .terminal-tab.active {
+            color: #ffffff;
+            border-bottom-color: #007acc;
+            background: #1e1e1e;
+        }
+
+        .terminal-tab-name {
+            cursor: pointer;
+        }
+
+        .terminal-tab-close {
+            font-size: 14px;
+            opacity: 0.5;
+            cursor: pointer;
+        }
+
+        .terminal-tab-close:hover {
+            opacity: 1;
+        }
+
+        .terminal-actions {
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            gap: 5px;
+        }
+
+        .terminal-action-btn {
+            background: none;
+            border: none;
+            color: #cccccc;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .terminal-action-btn:hover {
+            background: #3e3e42;
+        }
+
+        .terminal-close {
+            background: none;
+            border: none;
+            color: #cccccc;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .terminal-close:hover {
+            background: #3e3e42;
+        }
+
+        .terminal-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .terminal-output {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            color: #cccccc;
+        }
+
+        .terminal-input-container {
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            background: #1e1e1e;
+        }
+
+        .terminal-prompt {
+            color: #4caf50;
+            margin-right: 10px;
+            font-family: 'Consolas', monospace;
+        }
+
+        .terminal-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #cccccc;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .terminal-line {
+            margin-bottom: 4px;
+            white-space: pre-wrap;
+        }
+
+        .terminal-info {
+            color: #569cd6;
+        }
+
+        .terminal-error {
+            color: #f44336;
+        }
+
+        .terminal-success {
+            color: #4caf50;
+        }
+
+        .terminal-command {
+            color: #ce9178;
+        }
+
+        /* Settings Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: #252526;
+            width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 15px 20px;
+            background: #2d2d30;
+            border-bottom: 1px solid #3e3e42;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #cccccc;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .setting-item {
+            margin-bottom: 20px;
+        }
+
+        .setting-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #cccccc;
+        }
+
+        .setting-control {
+            width: 100%;
+            padding: 8px;
+            background: #3c3c3c;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 4px;
+        }
+
+        .setting-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .setting-checkbox input {
+            width: 16px;
+            height: 16px;
+        }
     </style>
 </head>
 
@@ -395,19 +850,95 @@
         <div class="titlebar">
             <div class="titlebar-logo">
                 <div class="logo-icon"><img src="logoname.png" alt="ByteCode Logo"></div>
-                <div class="titlebar-title">ByteCode</div>
+                <!-- Custom Menu Bar -->
+                <div class="menubar">
+                    <div class="menu-item">
+                        File
+                        <div class="dropdown-menu">
+                            <div class="dropdown-item" onclick="createNewFile()">New File <span
+                                    class="shortcut">Ctrl+N</span></div>
+                            <div class="dropdown-item" onclick="openFile()">Open File <span
+                                    class="shortcut">Ctrl+O</span></div>
+                            <div class="dropdown-item" onclick="openFolder()">Open Folder <span
+                                    class="shortcut">Ctrl+Shift+O</span></div>
+                            <div class="dropdown-separator"></div>
+                            <div class="dropdown-item" onclick="saveCurrentFile()">Save <span
+                                    class="shortcut">Ctrl+S</span></div>
+                            <div class="dropdown-item" onclick="saveFileAs()">Save As... <span
+                                    class="shortcut">Ctrl+Shift+S</span></div>
+                            <div class="dropdown-separator"></div>
+                            <div class="dropdown-item" onclick="openSettings()">Settings</div>
+                            <div class="dropdown-item" onclick="closeApp()">Exit <span class="shortcut">Ctrl+Q</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="menu-item">
+                        Edit
+                        <div class="dropdown-menu">
+                            <div class="dropdown-item" onclick="triggerEdit('undo')">Undo <span
+                                    class="shortcut">Ctrl+Z</span></div>
+                            <div class="dropdown-item" onclick="triggerEdit('redo')">Redo <span
+                                    class="shortcut">Ctrl+Y</span></div>
+                            <div class="dropdown-separator"></div>
+                            <div class="dropdown-item" onclick="triggerEdit('cut')">Cut <span
+                                    class="shortcut">Ctrl+X</span></div>
+                            <div class="dropdown-item" onclick="triggerEdit('copy')">Copy <span
+                                    class="shortcut">Ctrl+C</span></div>
+                            <div class="dropdown-item" onclick="triggerEdit('paste')">Paste <span
+                                    class="shortcut">Ctrl+V</span></div>
+                        </div>
+                    </div>
+                    <div class="menu-item">
+                        View
+                        <div class="dropdown-menu">
+                            <div class="dropdown-item" onclick="toggleTerminal()">Toggle Terminal <span
+                                    class="shortcut">Ctrl+`</span></div>
+                            <div class="dropdown-item" onclick="toggleFullScreen()">Toggle Full Screen <span
+                                    class="shortcut">F11</span></div>
+                        </div>
+                    </div>
+                    <div class="menu-item">
+                        Help
+                        <div class="dropdown-menu">
+                            <div class="dropdown-item" onclick="showAbout()">About ByteCode</div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="titlebar-file" id="titlebar-file"></div>
         </div>
 
         <div class="main-content">
-            <div class="sidebar">
+            <div class="sidebar" id="sidebar">
                 <div class="sidebar-header">
                     <div class="sidebar-title">Explorer</div>
                     <div class="sidebar-actions">
-                        <button class="sidebar-btn" onclick="createNewFile()" title="New File">📄</button>
-                        <button class="sidebar-btn" onclick="openFile()" title="Open File">📂</button>
-                        <button class="sidebar-btn" onclick="openFolder()" title="Open Folder">📁</button>
+                        <button class="sidebar-btn" onclick="showNewFileDialog()" title="New File">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path
+                                    d="M9.5 1.1v3.4h3.4L9.5 1.1zM10 0H2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6l-6-6zM8 12H7V9H4V8h3V5h1v3h3v1H8v3z" />
+                            </svg>
+                        </button>
+                        <button class="sidebar-btn" onclick="showNewFolderDialog()" title="New Folder">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path
+                                    d="M14 4H8l-1-2H2a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2zm-3 6H9v2H7v-2H5V8h2V6h2v2h2v2z" />
+                            </svg>
+                        </button>
+                        <button class="sidebar-btn" onclick="openFolder()" title="Open Folder">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path
+                                    d="M1 3.5A1.5 1.5 0 012.5 2h2.764a1.5 1.5 0 011.025.404l1.422 1.322H13.5A1.5 1.5 0 0115 5.226V6H1V3.5zM.5 7h15l-1.5 7H2L.5 7z" />
+                            </svg>
+                        </button>
+                        <button class="sidebar-btn" onclick="refreshFolder()" title="Refresh">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <path
+                                    d="M13.5 2a.5.5 0 01.5.5V5h-2.5a.5.5 0 010-1H13V2.5a.5.5 0 01.5-.5zM2.5 14a.5.5 0 01-.5-.5V11h2.5a.5.5 0 010 1H3v1.5a.5.5 0 01-.5.5z" />
+                                <path d="M8 3a5 5 0 104.546 2.914.5.5 0 01.908-.418A6 6 0 118 2v1z" />
+                                <path d="M8 13A5 5 0 113.454 10.086a.5.5 0 01-.908.418A6 6 0 108 14v-1z" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
                 <div id="folder-tree" class="folder-tree">
@@ -417,6 +948,7 @@
                     </div>
                 </div>
             </div>
+            <div class="sidebar-resizer" id="sidebar-resizer"></div>
 
             <div class="editor-container">
                 <div class="editor-tabs" id="editor-tabs"></div>
@@ -430,6 +962,11 @@
                     </div>
                 </div>
                 <div id="editor"></div>
+                <div id="preview-container">
+                    <div id="preview-content"></div>
+                    <p class="preview-msg" id="preview-msg"></p>
+                </div>
+                <div id="terminal-container"></div>
             </div>
         </div>
 
@@ -446,7 +983,103 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Settings</div>
+                <button class="modal-close" onclick="closeSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-item">
+                    <label class="setting-checkbox">
+                        <input type="checkbox" id="setting-autosave" onchange="toggleAutoSave()">
+                        <span>Auto Save</span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <label class="setting-label">Language</label>
+                    <select class="setting-control" id="setting-language" onchange="changeLanguage()">
+                        <option value="en">English</option>
+                        <option value="fr">Français</option>
+                        <option value="es">Español</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label class="setting-label">Theme</label>
+                    <select class="setting-control" id="setting-theme" onchange="changeTheme()">
+                        <option value="vs-dark">Dark</option>
+                        <option value="vs-light">Light</option>
+                        <option value="hc-black">High Contrast</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu" class="context-menu">
+        <div class="context-item" onclick="contextNewFile()">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M9.5 1.1v3.4h3.4L9.5 1.1zM10 0H2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6l-6-6z" />
+            </svg>
+            New File
+        </div>
+        <div class="context-item" onclick="contextNewFolder()">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M14 4H8l-1-2H2a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2z" />
+            </svg>
+            New Folder
+        </div>
+        <div class="context-separator"></div>
+        <div class="context-item" onclick="contextRename()">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path
+                    d="M12.146.146a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-10 10a.5.5 0 01-.168.11l-5 2a.5.5 0 01-.65-.65l2-5a.5.5 0 01.11-.168l10-10z" />
+            </svg>
+            Rename
+        </div>
+        <div class="context-item" onclick="contextDelete()">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path
+                    d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z" />
+                <path
+                    d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
+            </svg>
+            Delete
+        </div>
+        <div class="context-separator"></div>
+        <div class="context-item" onclick="contextCopyPath()">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <path
+                    d="M4 1.5H3a2 2 0 00-2 2V14a2 2 0 002 2h10a2 2 0 002-2V3.5a2 2 0 00-2-2h-1v1h1a1 1 0 011 1V14a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1h1v-1z" />
+                <path d="M9.5 1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-3a.5.5 0 01-.5-.5v-1a.5.5 0 01.5-.5h3z" />
+            </svg>
+            Copy Path
+        </div>
+    </div>
+
+    <!-- New File/Folder Modal -->
+    <div id="input-modal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <div class="modal-title" id="input-modal-title">New File</div>
+                <button class="modal-close" onclick="closeInputModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="input-modal-input" class="modal-input" placeholder="Enter name..."
+                    onkeydown="handleInputModalKey(event)">
+                <div class="modal-buttons">
+                    <button class="modal-btn secondary" onclick="closeInputModal()">Cancel</button>
+                    <button class="modal-btn primary" onclick="confirmInputModal()">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="terminal.js"></script>
     <script src="renderer.js"></script>
+    <script src="contextmenu.js"></script>
 </body>
 
 </html>

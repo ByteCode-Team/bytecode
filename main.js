@@ -8,6 +8,30 @@ app.commandLine.appendSwitch('disable-gpu');
 app.commandLine.appendSwitch('disable-software-rasterizer');
 
 let mainWindow;
+const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+
+// Settings functions
+function loadSettings() {
+  try {
+    if (fsSync.existsSync(settingsPath)) {
+      const data = fsSync.readFileSync(settingsPath, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error('Failed to load settings:', err);
+  }
+  return null;
+}
+
+function saveSettingsToFile(settings) {
+  try {
+    fsSync.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+    return true;
+  } catch (err) {
+    console.error('Failed to save settings:', err);
+    return false;
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -26,6 +50,7 @@ function createWindow() {
     },
     icon: path.join(__dirname, 'assets', 'icon.png'),
     frame: true,
+    autoHideMenuBar: true,
     backgroundColor: '#1e1e1e',
     show: false,
     title: 'ByteCode'
@@ -168,7 +193,7 @@ function createMenu() {
               type: 'info',
               title: 'About ByteCode',
               message: 'ByteCode IDE',
-              detail: 'Version 1.0.0\\nModern IDE powered by Monaco Editor',
+              detail: 'Version 0.0.1\nByteCode, a modern IDE powered by Monaco Editor by the ByteCode-Team. Thanks to Lololegeek, the founder of ByteCode-Team and ByteCode.',
               buttons: ['OK']
             });
           }
@@ -273,6 +298,20 @@ ipcMain.on('load-folder-contents', async (event, folderPath) => {
     });
   } catch (err) {
     event.reply('folder-contents-error', { path: folderPath });
+  }
+});
+
+// Refresh a folder (reload its contents)
+ipcMain.on('refresh-folder', async (event, folderPath) => {
+  try {
+    const structure = await readDirectory(folderPath);
+    event.reply('folder-refreshed', {
+      path: folderPath,
+      name: path.basename(folderPath),
+      structure: structure
+    });
+  } catch (err) {
+    event.reply('folder-refresh-error', { path: folderPath });
   }
 });
 
@@ -397,6 +436,21 @@ ipcMain.on('move-item', async (event, { sourcePath, destPath }) => {
   }
 });
 
+// Settings management
+ipcMain.on('load-settings', (event) => {
+  const settings = loadSettings();
+  event.reply('settings-loaded', settings);
+});
+
+ipcMain.on('save-settings', (event, settings) => {
+  saveSettingsToFile(settings);
+});
+
+ipcMain.on('restart-app', () => {
+  app.relaunch();
+  app.exit();
+});
+
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
@@ -409,4 +463,36 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
+});
+
+ipcMain.on('close-app', () => {
+  app.quit();
+});
+
+ipcMain.on('show-about', () => {
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'About ByteCode',
+    message: 'ByteCode IDE',
+    detail: 'Version 0.0.1\nByteCode, a modern IDE powered by Monaco Editor by the ByteCode-Team. Thanks to Lololegeek, the founder of ByteCode-Team and ByteCode.',
+    buttons: ['OK']
+  });
+});
+
+ipcMain.on('toggle-fullscreen', () => {
+  if (mainWindow) {
+    mainWindow.setFullScreen(!mainWindow.isFullScreen());
+  }
+});
+
+ipcMain.on('execute-terminal-command', (event, { command, cwd }) => {
+  const { exec } = require('child_process');
+  
+  exec(command, { cwd: cwd, shell: true }, (error, stdout, stderr) => {
+    event.reply('terminal-command-result', {
+      error: error ? error.message : null,
+      stdout: stdout,
+      stderr: stderr
+    });
+  });
 });
