@@ -852,55 +852,55 @@
                 <div class="logo-icon"><img src="logoname.png" alt="ByteCode Logo"></div>
                 <!-- Custom Menu Bar -->
                 <div class="menubar">
-                    <div class="menu-item">
+                    <div class="menu-item" id="menu-file">
                         File
                         <div class="dropdown-menu">
-                            <div class="dropdown-item" onclick="createNewFile()">New File <span
+                            <div class="dropdown-item" id="menu-file-new" onclick="createNewFile()">New File <span
                                     class="shortcut">Ctrl+N</span></div>
-                            <div class="dropdown-item" onclick="openFile()">Open File <span
+                            <div class="dropdown-item" id="menu-file-open" onclick="openFile()">Open File <span
                                     class="shortcut">Ctrl+O</span></div>
-                            <div class="dropdown-item" onclick="openFolder()">Open Folder <span
+                            <div class="dropdown-item" id="menu-file-open-folder" onclick="openFolder()">Open Folder <span
                                     class="shortcut">Ctrl+Shift+O</span></div>
                             <div class="dropdown-separator"></div>
-                            <div class="dropdown-item" onclick="saveCurrentFile()">Save <span
+                            <div class="dropdown-item" id="menu-file-save" onclick="saveCurrentFile()">Save <span
                                     class="shortcut">Ctrl+S</span></div>
-                            <div class="dropdown-item" onclick="saveFileAs()">Save As... <span
+                            <div class="dropdown-item" id="menu-file-save-as" onclick="saveFileAs()">Save As... <span
                                     class="shortcut">Ctrl+Shift+S</span></div>
                             <div class="dropdown-separator"></div>
-                            <div class="dropdown-item" onclick="openSettings()">Settings</div>
-                            <div class="dropdown-item" onclick="closeApp()">Exit <span class="shortcut">Ctrl+Q</span>
+                            <div class="dropdown-item" id="menu-file-settings" onclick="openSettings()">Settings</div>
+                            <div class="dropdown-item" id="menu-file-exit" onclick="closeApp()">Exit <span class="shortcut">Ctrl+Q</span>
                             </div>
                         </div>
                     </div>
-                    <div class="menu-item">
+                    <div class="menu-item" id="menu-edit">
                         Edit
                         <div class="dropdown-menu">
-                            <div class="dropdown-item" onclick="triggerEdit('undo')">Undo <span
+                            <div class="dropdown-item" id="menu-edit-undo" onclick="triggerEdit('undo')">Undo <span
                                     class="shortcut">Ctrl+Z</span></div>
-                            <div class="dropdown-item" onclick="triggerEdit('redo')">Redo <span
+                            <div class="dropdown-item" id="menu-edit-redo" onclick="triggerEdit('redo')">Redo <span
                                     class="shortcut">Ctrl+Y</span></div>
                             <div class="dropdown-separator"></div>
-                            <div class="dropdown-item" onclick="triggerEdit('cut')">Cut <span
+                            <div class="dropdown-item" id="menu-edit-cut" onclick="triggerEdit('cut')">Cut <span
                                     class="shortcut">Ctrl+X</span></div>
-                            <div class="dropdown-item" onclick="triggerEdit('copy')">Copy <span
+                            <div class="dropdown-item" id="menu-edit-copy" onclick="triggerEdit('copy')">Copy <span
                                     class="shortcut">Ctrl+C</span></div>
-                            <div class="dropdown-item" onclick="triggerEdit('paste')">Paste <span
+                            <div class="dropdown-item" id="menu-edit-paste" onclick="triggerEdit('paste')">Paste <span
                                     class="shortcut">Ctrl+V</span></div>
                         </div>
                     </div>
-                    <div class="menu-item">
+                    <div class="menu-item" id="menu-view">
                         View
                         <div class="dropdown-menu">
-                            <div class="dropdown-item" onclick="toggleTerminal()">Toggle Terminal <span
+                            <div class="dropdown-item" id="menu-view-toggle-terminal" onclick="toggleTerminal()">Toggle Terminal <span
                                     class="shortcut">Ctrl+`</span></div>
-                            <div class="dropdown-item" onclick="toggleFullScreen()">Toggle Full Screen <span
+                            <div class="dropdown-item" id="menu-view-toggle-fullscreen" onclick="toggleFullScreen()">Toggle Full Screen <span
                                     class="shortcut">F11</span></div>
                         </div>
                     </div>
-                    <div class="menu-item">
+                    <div class="menu-item" id="menu-help">
                         Help
                         <div class="dropdown-menu">
-                            <div class="dropdown-item" onclick="showAbout()">About ByteCode</div>
+                            <div class="dropdown-item" id="menu-help-about" onclick="showAbout()">About ByteCode</div>
                         </div>
                     </div>
                 </div>
@@ -911,7 +911,7 @@
         <div class="main-content">
             <div class="sidebar" id="sidebar">
                 <div class="sidebar-header">
-                    <div class="sidebar-title">Explorer</div>
+                    <div class="sidebar-title" id="sidebar-title">Explorer</div>
                     <div class="sidebar-actions">
                         <button class="sidebar-btn" onclick="showNewFileDialog()" title="New File">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -943,8 +943,8 @@
                 </div>
                 <div id="folder-tree" class="folder-tree">
                     <div class="no-folder">
-                        <p>No folder opened</p>
-                        <button class="no-folder-btn" onclick="openFolder()">Open Folder</button>
+                        <p id="no-folder-p">No folder opened</p>
+                        <button class="no-folder-btn" id="no-folder-btn" onclick="openFolder()">Open Folder</button>
                     </div>
                 </div>
             </div>
@@ -955,10 +955,10 @@
                 <div id="welcome-screen" class="welcome-screen">
                     <div class="welcome-logo"><img src="logoname.png" alt="ByteCode Logo"></div>
                     <h1 class="welcome-title">ByteCode</h1>
-                    <p class="welcome-subtitle">Modern and powerful code editor</p>
+                    <p class="welcome-subtitle" id="welcome-subtitle">Modern and powerful code editor</p>
                     <div class="welcome-actions">
-                        <button class="welcome-btn" onclick="createNewFile()">New File</button>
-                        <button class="welcome-btn secondary" onclick="openFolder()">Open Folder</button>
+                        <button class="welcome-btn" id="welcome-new-file-btn" onclick="createNewFile()">New File</button>
+                        <button class="welcome-btn secondary" id="welcome-open-folder-btn" onclick="openFolder()">Open Folder</button>
                     </div>
                 </div>
                 <div id="editor"></div>
@@ -987,26 +987,25 @@
     <div id="settings-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-title">Settings</div>
+                <div class="modal-title" id="settings-title">Settings</div>
                 <button class="modal-close" onclick="closeSettings()">×</button>
             </div>
             <div class="modal-body">
                 <div class="setting-item">
                     <label class="setting-checkbox">
                         <input type="checkbox" id="setting-autosave" onchange="toggleAutoSave()">
-                        <span>Auto Save</span>
+                        <span id="setting-autosave-span">Auto Save</span>
                     </label>
                 </div>
                 <div class="setting-item">
-                    <label class="setting-label">Language</label>
+                    <label class="setting-label" id="setting-language-label">Language</label>
                     <select class="setting-control" id="setting-language" onchange="changeLanguage()">
                         <option value="en">English</option>
                         <option value="fr">Français</option>
-                        <option value="es">Español</option>
                     </select>
                 </div>
                 <div class="setting-item">
-                    <label class="setting-label">Theme</label>
+                    <label class="setting-label" id="setting-theme-label">Theme</label>
                     <select class="setting-control" id="setting-theme" onchange="changeTheme()">
                         <option value="vs-dark">Dark</option>
                         <option value="vs-light">Light</option>
@@ -1019,27 +1018,27 @@
 
     <!-- Context Menu -->
     <div id="context-menu" class="context-menu">
-        <div class="context-item" onclick="contextNewFile()">
+        <div id="context-new-file" class="context-item" onclick="contextNewFile()">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M9.5 1.1v3.4h3.4L9.5 1.1zM10 0H2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6l-6-6z" />
             </svg>
             New File
         </div>
-        <div class="context-item" onclick="contextNewFolder()">
+        <div id="context-new-folder" class="context-item" onclick="contextNewFolder()">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M14 4H8l-1-2H2a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2z" />
             </svg>
             New Folder
         </div>
         <div class="context-separator"></div>
-        <div class="context-item" onclick="contextRename()">
+        <div id="context-rename" class="context-item" onclick="contextRename()">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                 <path
                     d="M12.146.146a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-10 10a.5.5 0 01-.168.11l-5 2a.5.5 0 01-.65-.65l2-5a.5.5 0 01.11-.168l10-10z" />
             </svg>
             Rename
         </div>
-        <div class="context-item" onclick="contextDelete()">
+        <div id="context-delete" class="context-item" onclick="contextDelete()">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                 <path
                     d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z" />
@@ -1049,7 +1048,7 @@
             Delete
         </div>
         <div class="context-separator"></div>
-        <div class="context-item" onclick="contextCopyPath()">
+        <div id="context-copy-path" class="context-item" onclick="contextCopyPath()">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                 <path
                     d="M4 1.5H3a2 2 0 00-2 2V14a2 2 0 002 2h10a2 2 0 002-2V3.5a2 2 0 00-2-2h-1v1h1a1 1 0 011 1V14a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1h1v-1z" />

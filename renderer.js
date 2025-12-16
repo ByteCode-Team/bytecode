@@ -49,6 +49,7 @@ ipcRenderer.on('settings-loaded', (event, loadedSettings) => {
     if (loadedSettings) {
         settings = { ...settings, ...loadedSettings };
         currentLang = settings.language || 'en';
+        document.documentElement.lang = currentLang;
 
         // Apply auto-save if enabled
         if (settings.autosave) {
@@ -56,6 +57,9 @@ ipcRenderer.on('settings-loaded', (event, loadedSettings) => {
         }
     }
 });
+
+
+
 
 // Configuration de Monaco Editor avec le chemin local
 const amdRequire = require('monaco-editor/min/vs/loader.js').require;
@@ -452,7 +456,8 @@ function renderFolderTree(structure, container, level = 0) {
                 if (isExpanded) {
                     childrenDiv.classList.remove('expanded');
                     arrow.classList.remove('expanded');
-                } else {
+                }
+                else {
                     if (item.children.length === 0) {
                         ipcRenderer.send('load-folder-contents', item.path);
                         item.element = childrenDiv;
@@ -475,7 +480,8 @@ function renderFolderTree(structure, container, level = 0) {
             if (item.children && item.children.length > 0) {
                 renderFolderTree(item.children, childrenDiv, level + 1);
             }
-        } else {
+        }
+        else {
             const fileItem = document.createElement('div');
             fileItem.className = 'tree-item';
             fileItem.style.paddingLeft = `${28 + level * 16}px`;
@@ -594,7 +600,7 @@ function closeAllFiles() {
     // Vérifier s'il y a des fichiers modifiés
     const hasModified = openFiles.some(f => f.modified);
     if (hasModified) {
-        if (!confirm('Des fichiers non sauvegardés seront perdus. Continuer?')) {
+        if (!confirm(t('exitWithUnsaved'))) {
             return false;
         }
     }

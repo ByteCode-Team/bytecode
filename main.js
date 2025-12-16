@@ -10,6 +10,29 @@ app.commandLine.appendSwitch('disable-software-rasterizer');
 let mainWindow;
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 
+let translations = {};
+let currentLang = 'en';
+
+// Load translations
+function loadTranslations() {
+  try {
+    const translationsPath = path.join(__dirname, 'translations.json');
+    const data = fsSync.readFileSync(translationsPath, 'utf8');
+    translations = JSON.parse(data);
+    const settings = loadSettings();
+    currentLang = settings?.language || 'en';
+  } catch (err) {
+    console.error('Failed to load translations in main process:', err);
+    translations = { en: {} };
+  }
+}
+
+function t(key) {
+  return translations[currentLang]?.[key] || translations['en']?.[key] || key;
+}
+
+loadTranslations();
+
 // Settings functions
 function loadSettings() {
   try {
@@ -72,15 +95,15 @@ function createWindow() {
 function createMenu() {
   const template = [
     {
-      label: 'File',
+      label: t('file'),
       submenu: [
         {
-          label: 'New File',
+          label: t('newFile'),
           accelerator: 'CmdOrCtrl+N',
           click: () => mainWindow.webContents.send('new-file')
         },
         {
-          label: 'Open File',
+          label: t('openFile'),
           accelerator: 'CmdOrCtrl+O',
           click: () => {
             dialog.showOpenDialog(mainWindow, { properties: ['openFile'] }).then(result => {
@@ -98,7 +121,7 @@ function createMenu() {
           }
         },
         {
-          label: 'Open Folder',
+          label: t('openFolder'),
           accelerator: 'CmdOrCtrl+Shift+O',
           click: () => {
             dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] }).then(async result => {
@@ -112,7 +135,7 @@ function createMenu() {
                     structure: structure
                   });
                 } catch (err) {
-                  dialog.showErrorBox('Error', 'Cannot read folder');
+                  dialog.showErrorBox(t('error'), t('cannotReadFolder'));
                 }
               }
             });
@@ -120,81 +143,81 @@ function createMenu() {
         },
         { type: 'separator' },
         {
-          label: 'Save',
+          label: t('save'),
           accelerator: 'CmdOrCtrl+S',
           click: () => mainWindow.webContents.send('save-file')
         },
         {
-          label: 'Save As...',
+          label: t('saveAs'),
           accelerator: 'CmdOrCtrl+Shift+S',
           click: () => mainWindow.webContents.send('save-file-as')
         },
         { type: 'separator' },
         {
-          label: 'Close Folder',
+          label: t('closeFolder'),
           click: () => mainWindow.webContents.send('close-folder')
         },
         { type: 'separator' },
         {
-          label: 'Exit',
+          label: t('exit'),
           accelerator: 'CmdOrCtrl+Q',
           click: () => app.quit()
         }
       ]
     },
     {
-      label: 'Edit',
+      label: t('edit'),
       submenu: [
-        { label: 'Undo', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
-        { label: 'Redo', accelerator: 'CmdOrCtrl+Y', role: 'redo' },
+        { label: t('undo'), accelerator: 'CmdOrCtrl+Z', role: 'undo' },
+        { label: t('redo'), accelerator: 'CmdOrCtrl+Y', role: 'redo' },
         { type: 'separator' },
-        { label: 'Cut', accelerator: 'CmdOrCtrl+X', role: 'cut' },
-        { label: 'Copy', accelerator: 'CmdOrCtrl+C', role: 'copy' },
-        { label: 'Paste', accelerator: 'CmdOrCtrl+V', role: 'paste' },
+        { label: t('cut'), accelerator: 'CmdOrCtrl+X', role: 'cut' },
+        { label: t('copy'), accelerator: 'CmdOrCtrl+C', role: 'copy' },
+        { label: t('paste'), accelerator: 'CmdOrCtrl+V', role: 'paste' },
         { type: 'separator' },
         {
-          label: 'Find',
+          label: t('find'),
           accelerator: 'CmdOrCtrl+F',
           click: () => mainWindow.webContents.send('find')
         },
         {
-          label: 'Replace',
+          label: t('replace'),
           accelerator: 'CmdOrCtrl+H',
           click: () => mainWindow.webContents.send('replace')
         }
       ]
     },
     {
-      label: 'View',
+      label: t('view'),
       submenu: [
-        { label: 'Reload', accelerator: 'CmdOrCtrl+R', role: 'reload' },
-        { label: 'Toggle Developer Tools', accelerator: 'F12', role: 'toggleDevTools' },
+        { label: t('reload'), accelerator: 'CmdOrCtrl+R', role: 'reload' },
+        { label: t('toggleDevTools'), accelerator: 'F12', role: 'toggleDevTools' },
         { type: 'separator' },
         {
-          label: 'Toggle Terminal',
+          label: t('toggleTerminal'),
           accelerator: 'Ctrl+`',
           click: () => mainWindow.webContents.send('toggle-terminal')
         },
         { type: 'separator' },
-        { label: 'Zoom In', accelerator: 'CmdOrCtrl+Plus', role: 'zoomIn' },
-        { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
-        { label: 'Reset Zoom', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' },
+        { label: t('zoomIn'), accelerator: 'CmdOrCtrl+Plus', role: 'zoomIn' },
+        { label: t('zoomOut'), accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
+        { label: t('resetZoom'), accelerator: 'CmdOrCtrl+0', role: 'resetZoom' },
         { type: 'separator' },
-        { label: 'Toggle Full Screen', accelerator: 'F11', role: 'togglefullscreen' }
+        { label: t('toggleFullScreen'), accelerator: 'F11', role: 'togglefullscreen' }
       ]
     },
     {
-      label: 'Help',
+      label: t('help'),
       submenu: [
         {
-          label: 'About ByteCode',
+          label: t('about'),
           click: () => {
             dialog.showMessageBox(mainWindow, {
               type: 'info',
-              title: 'About ByteCode',
-              message: 'ByteCode IDE',
-              detail: 'Version 0.0.1\nByteCode, a modern IDE powered by Monaco Editor by the ByteCode-Team. Thanks to Lololegeek, the founder of ByteCode-Team and ByteCode.',
-              buttons: ['OK']
+              title: t('aboutByteCode'),
+              message: t('ByteCodeIDE'),
+              detail: t('aboutDetail'),
+              buttons: [t('ok')]
             });
           }
         }
@@ -210,14 +233,14 @@ ipcMain.on('open-file-dialog', () => {
   dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
     filters: [
-      { name: 'All Files', extensions: ['*'] },
-      { name: 'JavaScript', extensions: ['js', 'jsx'] },
-      { name: 'TypeScript', extensions: ['ts', 'tsx'] },
-      { name: 'HTML', extensions: ['html', 'htm'] },
-      { name: 'CSS', extensions: ['css', 'scss', 'sass'] },
-      { name: 'JSON', extensions: ['json'] },
-      { name: 'Markdown', extensions: ['md'] },
-      { name: 'Python', extensions: ['py'] }
+      { name: t('allFiles'), extensions: ['*'] },
+      { name: t('javaScript'), extensions: ['js', 'jsx'] },
+      { name: t('typeScript'), extensions: ['ts', 'tsx'] },
+      { name: t('html'), extensions: ['html', 'htm'] },
+      { name: t('css'), extensions: ['css', 'scss', 'sass'] },
+      { name: t('json'), extensions: ['json'] },
+      { name: t('markdown'), extensions: ['md'] },
+      { name: t('python'), extensions: ['py'] }
     ]
   }).then(result => {
     if (!result.canceled && result.filePaths.length > 0) {
@@ -229,7 +252,7 @@ ipcMain.on('open-file-dialog', () => {
           name: path.basename(filePath)
         });
       }).catch(err => {
-        dialog.showErrorBox('Error', 'Cannot read file');
+        dialog.showErrorBox(t('error'), t('cannotReadFile'));
       });
     }
   });
@@ -333,7 +356,7 @@ ipcMain.on('save-file-content', (event, { filePath, content }) => {
   if (filePath) {
     fsSync.writeFile(filePath, content, 'utf8', (err) => {
       if (err) {
-        dialog.showErrorBox('Error', 'Cannot save file');
+        dialog.showErrorBox(t('error'), t('cannotSaveFile'));
         event.reply('save-file-result', { success: false });
       } else {
         event.reply('save-file-result', { success: true, path: filePath });
@@ -342,13 +365,13 @@ ipcMain.on('save-file-content', (event, { filePath, content }) => {
   } else {
     dialog.showSaveDialog(mainWindow, {
       filters: [
-        { name: 'All Files', extensions: ['*'] }
+        { name: t('allFiles'), extensions: ['*'] }
       ]
     }).then(result => {
       if (!result.canceled) {
         fsSync.writeFile(result.filePath, content, 'utf8', (err) => {
           if (err) {
-            dialog.showErrorBox('Error', 'Cannot save file');
+            dialog.showErrorBox(t('error'), t('cannotSaveFile'));
             event.reply('save-file-result', { success: false });
           } else {
             event.reply('save-file-result', { success: true, path: result.filePath });
@@ -444,6 +467,10 @@ ipcMain.on('load-settings', (event) => {
 
 ipcMain.on('save-settings', (event, settings) => {
   saveSettingsToFile(settings);
+  // Update the current language in the main process immediately
+  currentLang = settings.language || 'en';
+  // Rebuild the menu with the new language
+  createMenu();
 });
 
 ipcMain.on('restart-app', () => {
@@ -472,10 +499,10 @@ ipcMain.on('close-app', () => {
 ipcMain.on('show-about', () => {
   dialog.showMessageBox(mainWindow, {
     type: 'info',
-    title: 'About ByteCode',
-    message: 'ByteCode IDE',
-    detail: 'Version 0.0.1\nByteCode, a modern IDE powered by Monaco Editor by the ByteCode-Team. Thanks to Lololegeek, the founder of ByteCode-Team and ByteCode.',
-    buttons: ['OK']
+    title: t('aboutByteCode'),
+    message: t('ByteCodeIDE'),
+    detail: t('aboutDetail'),
+    buttons: [t('ok')]
   });
 });
 
