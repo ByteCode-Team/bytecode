@@ -1,7 +1,10 @@
-const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, dialog, ipcMain, session, shell } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 const fsSync = require('fs');
+
+// Enable @electron/remote for AI features
+require('@electron/remote/main').initialize();
 
 // Désactiver le GPU pour éviter les problèmes de rendu
 app.commandLine.appendSwitch('disable-gpu');
@@ -16,7 +19,7 @@ let currentLang = 'en';
 // Load translations
 function loadTranslations() {
   try {
-    const translationsPath = path.join(__dirname, 'translations.json');
+    const translationsPath = path.join(__dirname, '../translations.json');
     const data = fsSync.readFileSync(translationsPath, 'utf8');
     translations = JSON.parse(data);
     const settings = loadSettings();
@@ -71,15 +74,40 @@ function createWindow() {
       nodeIntegrationInWorker: false,
       webviewTag: false
     },
-    icon: path.join(__dirname, 'assets', 'icon.png'),
-    frame: true,
+    icon: path.join(__dirname, '../assets', 'icon.png'),
+    frame: false,
     autoHideMenuBar: true,
     backgroundColor: '#1e1e1e',
     show: false,
     title: 'ByteCode'
   });
 
-  mainWindow.loadFile('index.html');
+  mainWindow.loadFile(path.join(__dirname, '../index.html'));
+
+  // Open external links (including Puter subscription/auth popups) in the user's browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      shell.openExternal(url);
+    } catch (e) {
+      console.error('Failed to open external URL:', url, e);
+    }
+    return { action: 'deny' };
+  });
+
+  // Enable @electron/remote for this window
+  require('@electron/remote/main').enable(mainWindow.webContents);
+
+  // Intercept Puter.js requests to fake Origin
+  // This fixes the 403 Forbidden error because Puter rejects 'file://' origin
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['*://*.puter.com/*', '*://*.puter.site/*'] },
+    (details, callback) => {
+      details.requestHeaders['Origin'] = 'http://localhost';
+      details.requestHeaders['Referer'] = 'http://localhost/';
+      details.requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+      callback({ cancel: false, requestHeaders: details.requestHeaders });
+    }
+  );
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -91,6 +119,21 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+// Custom window controls (frameless window)
+ipcMain.on('window-minimize', () => {
+  if (mainWindow) mainWindow.minimize();
+});
+
+ipcMain.on('window-maximize-toggle', () => {
+  if (!mainWindow) return;
+  if (mainWindow.isMaximized()) mainWindow.unmaximize();
+  else mainWindow.maximize();
+});
+
+ipcMain.on('window-close', () => {
+  app.quit();
+});
 
 function createMenu() {
   const template = [
@@ -514,7 +557,7 @@ ipcMain.on('toggle-fullscreen', () => {
 
 ipcMain.on('execute-terminal-command', (event, { command, cwd }) => {
   const { exec } = require('child_process');
-  
+
   exec(command, { cwd: cwd, shell: true }, (error, stdout, stderr) => {
     event.reply('terminal-command-result', {
       error: error ? error.message : null,

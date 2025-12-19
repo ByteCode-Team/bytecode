@@ -325,7 +325,8 @@ ipcRendererCtx.on('folder-refreshed', (event, data) => {
 
         const container = document.getElementById('folder-tree');
         if (container && window.renderFolderTree) {
-            container.innerHTML = `<div class="folder-name">${data.name}</div>`;
+            const safeName = data.name || require('path').basename(data.path) || 'Project';
+            container.innerHTML = `<div class="folder-name">${safeName}</div>`;
             window.renderFolderTree(data.structure, container, 0);
         }
     }

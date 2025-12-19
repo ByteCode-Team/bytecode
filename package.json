@@ -29,7 +29,7 @@
       "url": "https://github.com/ByteCode-Team"
     }
   ],
-  "main": "main.js",
+  "main": "src/main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder"
@@ -46,7 +46,11 @@
   "author": "ByteCode Team",
   "license": "MIT",
   "dependencies": {
-    "monaco-editor": "^0.44.0"
+    "@electron/remote": "^2.1.2",
+    "axios": "^1.6.0",
+    "marked": "^11.0.0",
+    "monaco-editor": "^0.44.0",
+    "node-pty": "^0.10.1"
   },
   "devDependencies": {
     "electron": "^27.0.0",
