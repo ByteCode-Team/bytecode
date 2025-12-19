@@ -1,1977 +1,2165 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data: https://js.puter.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: file: https:; media-src 'self' file:; frame-src 'self' file:; worker-src 'self' blob: data:; connect-src 'self' https://api.groq.com https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://openrouter.ai http://localhost:* ws://localhost:* https://*.puter.com https://*.puter.site wss://*.puter.com wss://*.puter.site;"
-    />
-    <title>ByteCode</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Oxygen, Ubuntu, Cantarell, sans-serif;
-        overflow: hidden;
-        background: #1e1e1e;
-        color: #cccccc;
-      }
-
-      .app-container {
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-      }
-
-      .titlebar {
-        height: 50px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        display: flex;
-        align-items: center;
-        padding: 0 20px;
-        -webkit-app-region: no-drag;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      }
-
-      .titlebar-left,
-      .titlebar-right {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        -webkit-app-region: no-drag;
-      }
-
-      .titlebar-spacer {
-        flex: 1;
-        height: 100%;
-        -webkit-app-region: drag;
-      }
-
-      .window-controls {
-        display: flex;
-        align-items: stretch;
-        -webkit-app-region: no-drag;
-      }
-
-      .window-btn {
-        width: 46px;
-        height: 32px;
-        border: none;
-        background: transparent;
-        color: rgba(255, 255, 255, 0.95);
-        cursor: pointer;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.15s ease;
-      }
-
-      .window-btn:hover {
-        background: rgba(255, 255, 255, 0.14);
-      }
-
-      .window-btn.close:hover {
-        background: rgba(244, 67, 54, 0.9);
-      }
-
-      .window-btn svg {
-        width: 12px;
-        height: 12px;
-      }
-
-      .titlebar-logo {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .logo-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-        overflow: hidden;
-      }
-
-      .logo-icon img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-      }
-
-      .titlebar-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: white;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-      }
-
-      .titlebar-file {
-        font-size: 13px;
-        color: rgba(255, 255, 255, 0.9);
-        -webkit-app-region: no-drag;
-      }
-
-      .main-content {
-        display: flex;
-        flex: 1;
-        overflow: hidden;
-      }
-
-      .sidebar {
-        width: 280px;
-        background: #252526;
-        border-right: 1px solid #3e3e42;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-
-      .sidebar-header {
-        padding: 15px;
-        background: #2d2d30;
-        border-bottom: 1px solid #3e3e42;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-
-      .sidebar-title {
-        font-size: 11px;
-        text-transform: uppercase;
-        font-weight: 600;
-        letter-spacing: 1px;
-        color: #cccccc;
-      }
-
-      .sidebar-actions {
-        display: flex;
-        gap: 4px;
-      }
-
-      .sidebar-btn {
-        background: transparent;
-        border: none;
-        color: #cccccc;
-        cursor: pointer;
-        font-size: 16px;
-        padding: 4px 8px;
-        border-radius: 4px;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .sidebar-btn:hover {
-        background: #3e3e42;
-      }
-
-      .sidebar-btn svg {
-        width: 16px;
-        height: 16px;
-      }
-
-      /* Sidebar Resizer */
-      .sidebar-resizer {
-        width: 4px;
-        background: transparent;
-        cursor: col-resize;
-        transition: background 0.2s;
-      }
-
-      .sidebar-resizer:hover,
-      .sidebar-resizer.resizing {
-        background: #007acc;
-      }
-
-      /* Context Menu */
-      .context-menu {
-        display: none;
-        position: fixed;
-        background: #252526;
-        border: 1px solid #454545;
-        border-radius: 6px;
-        min-width: 180px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-        z-index: 3000;
-        padding: 6px 0;
-      }
-
-      .context-menu.visible {
-        display: block;
-      }
-
-      .context-item {
-        padding: 8px 16px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        color: #cccccc;
-        cursor: pointer;
-        font-size: 13px;
-      }
-
-      .context-item:hover {
-        background: #094771;
-        color: white;
-      }
-
-      .context-item svg {
-        opacity: 0.8;
-      }
-
-      .context-separator {
-        height: 1px;
-        background: #454545;
-        margin: 6px 0;
-      }
-
-      /* Input Modal */
-      .modal-small {
-        width: 400px;
-      }
-
-      .modal-input {
-        width: 100%;
-        padding: 10px 12px;
-        background: #3c3c3c;
-        border: 1px solid #555;
-        color: white;
-        border-radius: 4px;
-        font-size: 14px;
-        margin-bottom: 16px;
-      }
-
-      .modal-input:focus {
-        outline: none;
-        border-color: #007acc;
-      }
-
-      .modal-buttons {
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-      }
-
-      .modal-btn {
-        padding: 8px 16px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 500;
-      }
-
-      .modal-btn.primary {
-        background: #007acc;
-        color: white;
-      }
-
-      .modal-btn.primary:hover {
-        background: #0062a3;
-      }
-
-      .modal-btn.secondary {
-        background: #3c3c3c;
-        color: #cccccc;
-      }
-
-      .modal-btn.secondary:hover {
-        background: #4a4a4a;
-      }
-
-      .folder-tree {
-        flex: 1;
-        overflow-y: auto;
-        padding: 8px 0;
-      }
-
-      .folder-name {
-        padding: 8px 12px;
-        font-size: 13px;
-        color: #858585;
-        border-bottom: 1px solid #3e3e42;
-        background: #2d2d30;
-        text-transform: uppercase;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-      }
-
-      .tree-item {
-        padding: 6px 12px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        transition: all 0.2s;
-        font-size: 13px;
-        user-select: none;
-      }
-
-      .tree-item:hover {
-        background: #2a2d2e;
-      }
-
-      .tree-item.selected {
-        background: #37373d;
-        color: white;
-      }
-
-      .tree-item.folder {
-        font-weight: 500;
-      }
-
-      .tree-icon {
-        font-size: 14px;
-        width: 16px;
-        height: 16px;
-        text-align: center;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      }
-
-      .tree-icon svg {
-        width: 16px;
-        height: 16px;
-      }
-
-      .tree-arrow {
-        font-size: 10px;
-        width: 12px;
-        transition: transform 0.2s;
-      }
-
-      .tree-arrow.expanded {
-        transform: rotate(90deg);
-      }
-
-      .tree-children {
-        display: none;
-        padding-left: 16px;
-      }
-
-      .tree-children.expanded {
-        display: block;
-      }
-
-      .no-folder {
-        padding: 20px;
-        text-align: center;
-        color: #858585;
-        font-size: 13px;
-      }
-
-      .no-folder-btn {
-        margin-top: 10px;
-        padding: 8px 16px;
-        background: #667eea;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 13px;
-        transition: all 0.2s;
-      }
-
-      .no-folder-btn:hover {
-        background: #5568d3;
-      }
-
-      .editor-container {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-
-      .editor-tabs {
-        height: 40px;
-        background: #2d2d30;
-        border-bottom: 1px solid #3e3e42;
-        display: flex;
-        align-items: center;
-        padding: 0 10px;
-        gap: 4px;
-        overflow-x: auto;
-      }
-
-      .editor-tab {
-        padding: 8px 16px;
-        background: transparent;
-        border: none;
-        color: #cccccc;
-        cursor: pointer;
-        border-radius: 4px 4px 0 0;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        transition: all 0.2s;
-        min-width: 120px;
-        max-width: 200px;
-      }
-
-      .editor-tab:hover {
-        background: #2a2d2e;
-      }
-
-      .editor-tab.active {
-        background: #1e1e1e;
-        color: white;
-      }
-
-      .editor-tab-name {
-        flex: 1;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .editor-tab-close {
-        font-size: 14px;
-        opacity: 0.7;
-      }
-
-      .editor-tab-close:hover {
-        opacity: 1;
-      }
-
-      #editor {
-        flex: 1;
-        overflow: hidden;
-      }
-
-      .statusbar {
-        height: 24px;
-        background: #007acc;
-        display: flex;
-        align-items: center;
-        padding: 0 15px;
-        font-size: 12px;
-        color: white;
-        gap: 20px;
-      }
-
-      .statusbar-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-
-      .welcome-screen {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background: #1e1e1e;
-        padding: 40px;
-      }
-
-      .welcome-logo {
-        width: 120px;
-        height: 120px;
-        border-radius: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 30px;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        overflow: hidden;
-      }
-
-      .welcome-logo img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-      }
-
-      .welcome-title {
-        font-size: 32px;
-        font-weight: 700;
-        color: white;
-        margin-bottom: 10px;
-      }
-
-      .welcome-subtitle {
-        font-size: 16px;
-        color: #858585;
-        margin-bottom: 40px;
-      }
-
-      .welcome-actions {
-        display: flex;
-        gap: 15px;
-      }
-
-      .welcome-btn {
-        padding: 12px 24px;
-        background: #667eea;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 600;
-        transition: all 0.3s;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-      }
-
-      .welcome-btn:hover {
-        background: #5568d3;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
-      }
-
-      .welcome-btn.secondary {
-        background: #2d2d30;
-        box-shadow: none;
-      }
-
-      .welcome-btn.secondary:hover {
-        background: #3e3e42;
-      }
-
-      ::-webkit-scrollbar {
-        width: 10px;
-        height: 10px;
-      }
-
-      ::-webkit-scrollbar-track {
-        background: #1e1e1e;
-      }
-
-      ::-webkit-scrollbar-thumb {
-        background: #424242;
-        border-radius: 5px;
-      }
-
-      ::-webkit-scrollbar-thumb:hover {
-        background: #4e4e4e;
-      }
-
-      /* Menu Bar */
-      .menubar {
-        display: flex;
-        margin-left: 10px;
-        -webkit-app-region: no-drag;
-      }
-
-      .menu-item {
-        padding: 4px 10px;
-        cursor: pointer;
-        font-size: 13px;
-        color: #cccccc;
-        position: relative;
-      }
-
-      .menu-item:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 4px;
-        color: white;
-      }
-
-      .dropdown-menu {
-        display: none;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        background: #252526;
-        border: 1px solid #454545;
-        border-radius: 4px;
-        min-width: 200px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-        padding: 4px 0;
-      }
-
-      .menu-item:hover .dropdown-menu {
-        display: block;
-      }
-
-      .dropdown-item {
-        padding: 6px 16px;
-        display: flex;
-        justify-content: space-between;
-        color: #cccccc;
-        cursor: pointer;
-        font-size: 13px;
-      }
-
-      .dropdown-item:hover {
-        background: #094771;
-        color: white;
-      }
-
-      .dropdown-separator {
-        height: 1px;
-        background: #454545;
-        margin: 4px 0;
-      }
-
-      .shortcut {
-        color: #858585;
-        font-size: 12px;
-      }
-
-      /* Preview
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: data: https://js.puter.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: file: https:; media-src 'self' file:; frame-src 'self' file:; worker-src 'self' blob: data:; connect-src 'self' https://api.groq.com https://api.anthropic.com https://api.openai.com https://generativelanguage.googleapis.com https://openrouter.ai http://localhost:* ws://localhost:* https://*.puter.com https://*.puter.site wss://*.puter.com wss://*.puter.site;" />
+  <title>ByteCode</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Oxygen, Ubuntu, Cantarell, sans-serif;
+      overflow: hidden;
+      background: #1e1e1e;
+      color: #cccccc;
+    }
+
+    .app-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    .titlebar {
+      height: 50px;
+      min-height: 50px;
+      max-height: 50px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      -webkit-app-region: no-drag;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      flex-shrink: 0;
+    }
+
+    .titlebar-left,
+    .titlebar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      -webkit-app-region: no-drag;
+    }
+
+    .titlebar-spacer {
+      flex: 1;
+      height: 100%;
+      -webkit-app-region: drag;
+    }
+
+    .window-controls {
+      display: flex;
+      align-items: stretch;
+      -webkit-app-region: no-drag;
+    }
+
+    .window-btn {
+      width: 46px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.95);
+      cursor: pointer;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s ease;
+    }
+
+    .window-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .window-btn.close:hover {
+      background: rgba(244, 67, 54, 0.9);
+    }
+
+    .window-btn svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .titlebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+
+    .logo-icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .titlebar-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .titlebar-file {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.9);
+      -webkit-app-region: no-drag;
+    }
+
+    .main-content {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .sidebar {
+      width: 280px;
+      min-width: 200px;
+      background: #252526;
+      border-right: 1px solid #3e3e42;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 15px;
+      background: #2d2d30;
+      border-bottom: 1px solid #3e3e42;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #cccccc;
+    }
+
+    .sidebar-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .sidebar-btn {
+      background: transparent;
+      border: none;
+      color: #cccccc;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sidebar-btn:hover {
+      background: #3e3e42;
+    }
+
+    .sidebar-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Sidebar Resizer */
+    .sidebar-resizer {
+      width: 4px;
+      background: transparent;
+      cursor: col-resize;
+      transition: background 0.2s;
+    }
+
+    .sidebar-resizer:hover,
+    .sidebar-resizer.resizing {
+      background: #007acc;
+    }
+
+    /* Context Menu */
+    .context-menu {
+      display: none;
+      position: fixed;
+      background: #252526;
+      border: 1px solid #454545;
+      border-radius: 6px;
+      min-width: 180px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      z-index: 3000;
+      padding: 6px 0;
+    }
+
+    .context-menu.visible {
+      display: block;
+    }
+
+    .context-item {
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #cccccc;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .context-item:hover {
+      background: #094771;
+      color: white;
+    }
+
+    .context-item svg {
+      opacity: 0.8;
+    }
+
+    .context-separator {
+      height: 1px;
+      background: #454545;
+      margin: 6px 0;
+    }
+
+    /* Input Modal */
+    .modal-small {
+      width: 400px;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #3c3c3c;
+      border: 1px solid #555;
+      color: white;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .modal-input:focus {
+      outline: none;
+      border-color: #007acc;
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .modal-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .modal-btn.primary {
+      background: #007acc;
+      color: white;
+    }
+
+    .modal-btn.primary:hover {
+      background: #0062a3;
+    }
+
+    .modal-btn.secondary {
+      background: #3c3c3c;
+      color: #cccccc;
+    }
+
+    .modal-btn.secondary:hover {
+      background: #4a4a4a;
+    }
+
+    .folder-tree {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .folder-name {
+      padding: 8px 12px;
+      font-size: 13px;
+      color: #858585;
+      border-bottom: 1px solid #3e3e42;
+      background: #2d2d30;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .tree-item {
+      padding: 6px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      font-size: 13px;
+      user-select: none;
+    }
+
+    .tree-item:hover {
+      background: #2a2d2e;
+    }
+
+    .tree-item.selected {
+      background: #37373d;
+      color: white;
+    }
+
+    .tree-item.folder {
+      font-weight: 500;
+    }
+
+    .tree-icon {
+      font-size: 14px;
+      width: 16px;
+      height: 16px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .tree-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .tree-arrow {
+      font-size: 10px;
+      width: 12px;
+      transition: transform 0.2s;
+    }
+
+    .tree-arrow.expanded {
+      transform: rotate(90deg);
+    }
+
+    .tree-children {
+      display: none;
+      padding-left: 16px;
+    }
+
+    .tree-children.expanded {
+      display: block;
+    }
+
+    .no-folder {
+      padding: 20px;
+      text-align: center;
+      color: #858585;
+      font-size: 13px;
+    }
+
+    .no-folder-btn {
+      margin-top: 10px;
+      padding: 8px 16px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .no-folder-btn:hover {
+      background: #5568d3;
+    }
+
+    .editor-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .editor-tabs {
+      height: 40px;
+      background: #2d2d30;
+      border-bottom: 1px solid #3e3e42;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 4px;
+      overflow-x: auto;
+    }
+
+    .editor-tab {
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      color: #cccccc;
+      cursor: pointer;
+      border-radius: 4px 4px 0 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      transition: all 0.2s;
+      min-width: 120px;
+      max-width: 200px;
+    }
+
+    .editor-tab:hover {
+      background: #2a2d2e;
+    }
+
+    .editor-tab.active {
+      background: #1e1e1e;
+      color: white;
+    }
+
+    .editor-tab-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .editor-tab-close {
+      font-size: 14px;
+      opacity: 0.7;
+    }
+
+    .editor-tab-close:hover {
+      opacity: 1;
+    }
+
+    #editor {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .statusbar {
+      height: 24px;
+      min-height: 24px;
+      background: #007acc;
+      display: flex;
+      align-items: center;
+      padding: 0 15px;
+      font-size: 12px;
+      color: white;
+      gap: 20px;
+      flex-shrink: 0;
+      width: 100%;
+      margin-top: auto;
+    }
+
+    .statusbar-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .welcome-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #1e1e1e;
+      padding: 40px;
+    }
+
+    .welcome-logo {
+      width: 120px;
+      height: 120px;
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+      overflow: hidden;
+    }
+
+    .welcome-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .welcome-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 10px;
+    }
+
+    .welcome-subtitle {
+      font-size: 16px;
+      color: #858585;
+      margin-bottom: 40px;
+    }
+
+    .welcome-actions {
+      display: flex;
+      gap: 15px;
+    }
+
+    .welcome-btn {
+      padding: 12px 24px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .welcome-btn:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    }
+
+    .welcome-btn.secondary {
+      background: #2d2d30;
+      box-shadow: none;
+    }
+
+    .welcome-btn.secondary:hover {
+      background: #3e3e42;
+    }
+
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #1e1e1e;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #424242;
+      border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4e4e4e;
+    }
+
+    /* Menu Bar */
+    .menubar {
+      display: flex;
+      margin-left: 10px;
+      -webkit-app-region: no-drag;
+    }
+
+    .menu-item {
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #cccccc;
+      position: relative;
+    }
+
+    .menu-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      color: white;
+    }
+
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: #252526;
+      border: 1px solid #454545;
+      border-radius: 4px;
+      min-width: 200px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      padding: 4px 0;
+    }
+
+    .menu-item:hover .dropdown-menu {
+      display: block;
+    }
+
+    .dropdown-item {
+      padding: 6px 16px;
+      display: flex;
+      justify-content: space-between;
+      color: #cccccc;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .dropdown-item:hover {
+      background: #094771;
+      color: white;
+    }
+
+    .dropdown-separator {
+      height: 1px;
+      background: #454545;
+      margin: 4px 0;
+    }
+
+    .shortcut {
+      color: #858585;
+      font-size: 12px;
+    }
+
+    /* Preview
  Container */
-      #preview-container {
-        flex: 1;
-        display: none;
-        background: #1e1e1e;
-        align-items: center;
-        justify-content: center;
-        overflow: auto;
-        flex-direction: column;
+    #preview-container {
+      flex: 1;
+      display: none;
+      background: #1e1e1e;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      flex-direction: column;
+    }
+
+    #preview-content {
+      max-width: 90%;
+      max-height: 90%;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .preview-msg {
+      margin-top: 20px;
+      color: #858585;
+    }
+
+    /* Terminal */
+    #terminal-container {
+      height: 250px;
+      background: #1e1e1e;
+      border-top: 1px solid #3e3e42;
+      display: none;
+      flex-direction: column;
+    }
+
+    .terminal-header {
+      padding: 0;
+      background: #252526;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #3e3e42;
+      height: 35px;
+    }
+
+    .terminal-tabs {
+      display: flex;
+      flex: 1;
+      overflow-x: auto;
+      gap: 2px;
+      padding: 0 5px;
+    }
+
+    .terminal-tab {
+      display: flex;
+      align-items: center;
+      padding: 6px 12px;
+      background: transparent;
+      color: #858585;
+      font-size: 12px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .terminal-tab:hover {
+      background: #2a2d2e;
+      color: #cccccc;
+    }
+
+    .terminal-tab.active {
+      color: #ffffff;
+      border-bottom-color: #007acc;
+      background: #1e1e1e;
+    }
+
+    .terminal-tab-name {
+      cursor: pointer;
+    }
+
+    .terminal-tab-close {
+      font-size: 14px;
+      opacity: 0.5;
+      cursor: pointer;
+    }
+
+    .terminal-tab-close:hover {
+      opacity: 1;
+    }
+
+    .terminal-actions {
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 5px;
+    }
+
+    .terminal-action-btn {
+      background: none;
+      border: none;
+      color: #cccccc;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .terminal-action-btn:hover {
+      background: #3e3e42;
+    }
+
+    .terminal-close {
+      background: none;
+      border: none;
+      color: #cccccc;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+
+    .terminal-close:hover {
+      background: #3e3e42;
+    }
+
+    .terminal-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .terminal-output {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      font-family: "Consolas", monospace;
+      font-size: 14px;
+      color: #cccccc;
+    }
+
+    .terminal-input-container {
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      background: #1e1e1e;
+    }
+
+    .terminal-prompt {
+      color: #4caf50;
+      margin-right: 10px;
+      font-family: "Consolas", monospace;
+    }
+
+    .terminal-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #cccccc;
+      font-family: "Consolas", monospace;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .terminal-line {
+      margin-bottom: 4px;
+      white-space: pre-wrap;
+    }
+
+    .terminal-info {
+      color: #569cd6;
+    }
+
+    .terminal-error {
+      color: #f44336;
+    }
+
+    .terminal-success {
+      color: #4caf50;
+    }
+
+    .terminal-command {
+      color: #ce9178;
+    }
+
+    /* Settings Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: #252526;
+      width: 500px;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 15px 20px;
+      background: #2d2d30;
+      border-bottom: 1px solid #3e3e42;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #cccccc;
+      cursor: pointer;
+      font-size: 20px;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .setting-item {
+      margin-bottom: 20px;
+    }
+
+    .setting-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #cccccc;
+    }
+
+    .setting-control {
+      width: 100%;
+      padding: 8px;
+      background: #3c3c3c;
+      border: 1px solid #555;
+      color: white;
+      border-radius: 4px;
+    }
+
+    .setting-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .setting-checkbox input {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* AI Panel Styles */
+    .ai-panel {
+      position: fixed;
+      right: -400px;
+      top: 50px;
+      bottom: 0;
+      width: 400px;
+      background: #252526;
+      border-left: 1px solid #3e3e42;
+      display: flex;
+      flex-direction: column;
+      z-index: 1500;
+      transition: right 0.3s ease;
+    }
+
+    .ai-panel.open {
+      right: 0;
+    }
+
+    .ai-header {
+      padding: 12px 15px;
+      background: #2d2d30;
+      border-bottom: 1px solid #3e3e42;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .ai-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #cccccc;
+    }
+
+    .ai-title svg {
+      color: #667eea;
+    }
+
+    .ai-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .ai-btn {
+      background: transparent;
+      border: none;
+      color: #cccccc;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ai-btn.danger:hover {
+      background: rgba(244, 67, 54, 0.15);
+      color: #ff6b6b;
+    }
+
+    .ai-btn:hover {
+      background: #3e3e42;
+    }
+
+    .ai-chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .ai-welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+      gap: 12px;
+    }
+
+    .ai-welcome h3 {
+      font-size: 20px;
+      color: #ffffff;
+      margin: 0;
+    }
+
+    .ai-icon svg {
+      width: 48px;
+      height: 48px;
+      opacity: 0.3;
+    }
+
+    .ai-welcome p {
+      font-size: 14px;
+      color: #858585;
+      margin: 0;
+    }
+
+    .ai-quick-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    .ai-quick-btn {
+      padding: 12px;
+      background: #2d2d30;
+      border: 1px solid #3e3e42;
+      border-radius: 6px;
+      color: #cccccc;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ai-quick-btn:hover {
+      background: #3e3e42;
+      border-color: #667eea;
+    }
+
+    .ai-quick-btn span:first-child {
+      font-size: 24px;
+    }
+
+    .ai-message {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
       }
 
-      #preview-content {
-        max-width: 90%;
-        max-height: 90%;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-      }
-
-      .preview-msg {
-        margin-top: 20px;
-        color: #858585;
-      }
-
-      /* Terminal */
-      #terminal-container {
-        height: 250px;
-        background: #1e1e1e;
-        border-top: 1px solid #3e3e42;
-        display: none;
-        flex-direction: column;
-      }
-
-      .terminal-header {
-        padding: 0;
-        background: #252526;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #3e3e42;
-        height: 35px;
-      }
-
-      .terminal-tabs {
-        display: flex;
-        flex: 1;
-        overflow-x: auto;
-        gap: 2px;
-        padding: 0 5px;
-      }
-
-      .terminal-tab {
-        display: flex;
-        align-items: center;
-        padding: 6px 12px;
-        background: transparent;
-        color: #858585;
-        font-size: 12px;
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
-        gap: 8px;
-        white-space: nowrap;
-      }
-
-      .terminal-tab:hover {
-        background: #2a2d2e;
-        color: #cccccc;
-      }
-
-      .terminal-tab.active {
-        color: #ffffff;
-        border-bottom-color: #007acc;
-        background: #1e1e1e;
-      }
-
-      .terminal-tab-name {
-        cursor: pointer;
-      }
-
-      .terminal-tab-close {
-        font-size: 14px;
-        opacity: 0.5;
-        cursor: pointer;
-      }
-
-      .terminal-tab-close:hover {
+      to {
         opacity: 1;
-      }
-
-      .terminal-actions {
-        display: flex;
-        align-items: center;
-        padding: 0 10px;
-        gap: 5px;
-      }
-
-      .terminal-action-btn {
-        background: none;
-        border: none;
-        color: #cccccc;
-        cursor: pointer;
-        font-size: 18px;
-        padding: 4px 8px;
-        border-radius: 4px;
-      }
-
-      .terminal-action-btn:hover {
-        background: #3e3e42;
-      }
-
-      .terminal-close {
-        background: none;
-        border: none;
-        color: #cccccc;
-        cursor: pointer;
-        font-size: 16px;
-        padding: 4px 8px;
-        border-radius: 4px;
-      }
-
-      .terminal-close:hover {
-        background: #3e3e42;
-      }
-
-      .terminal-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-
-      .terminal-output {
-        flex: 1;
-        overflow-y: auto;
-        padding: 10px;
-        font-family: "Consolas", monospace;
-        font-size: 14px;
-        color: #cccccc;
-      }
-
-      .terminal-input-container {
-        padding: 10px;
-        display: flex;
-        align-items: center;
-        background: #1e1e1e;
-      }
-
-      .terminal-prompt {
-        color: #4caf50;
-        margin-right: 10px;
-        font-family: "Consolas", monospace;
-      }
-
-      .terminal-input {
-        flex: 1;
-        background: transparent;
-        border: none;
-        color: #cccccc;
-        font-family: "Consolas", monospace;
-        font-size: 14px;
-        outline: none;
-      }
-
-      .terminal-line {
-        margin-bottom: 4px;
-        white-space: pre-wrap;
-      }
-
-      .terminal-info {
-        color: #569cd6;
-      }
-
-      .terminal-error {
-        color: #f44336;
-      }
-
-      .terminal-success {
-        color: #4caf50;
-      }
-
-      .terminal-command {
-        color: #ce9178;
-      }
-
-      /* Settings Modal */
-      .modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 2000;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .modal-content {
-        background: #252526;
-        width: 500px;
-        border-radius: 8px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        overflow: hidden;
-      }
-
-      .modal-header {
-        padding: 15px 20px;
-        background: #2d2d30;
-        border-bottom: 1px solid #3e3e42;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .modal-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: white;
-      }
-
-      .modal-close {
-        background: none;
-        border: none;
-        color: #cccccc;
-        cursor: pointer;
-        font-size: 20px;
-      }
-
-      .modal-body {
-        padding: 20px;
-      }
-
-      .setting-item {
-        margin-bottom: 20px;
-      }
-
-      .setting-label {
-        display: block;
-        margin-bottom: 8px;
-        font-size: 14px;
-        color: #cccccc;
-      }
-
-      .setting-control {
-        width: 100%;
-        padding: 8px;
-        background: #3c3c3c;
-        border: 1px solid #555;
-        color: white;
-        border-radius: 4px;
-      }
-
-      .setting-checkbox {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        cursor: pointer;
-      }
-
-      .setting-checkbox input {
-        width: 16px;
-        height: 16px;
-      }
-
-      /* AI Panel Styles */
-      .ai-panel {
-        position: fixed;
-        right: -400px;
-        top: 50px;
-        bottom: 0;
-        width: 400px;
-        background: #252526;
-        border-left: 1px solid #3e3e42;
-        display: flex;
-        flex-direction: column;
-        z-index: 1500;
-        transition: right 0.3s ease;
-      }
-
-      .ai-panel.open {
-        right: 0;
-      }
-
-      .ai-header {
-        padding: 12px 15px;
-        background: #2d2d30;
-        border-bottom: 1px solid #3e3e42;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .ai-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        color: #cccccc;
-      }
-
-      .ai-title svg {
-        color: #667eea;
-      }
-
-      .ai-actions {
-        display: flex;
-        gap: 4px;
-      }
-
-      .ai-btn {
-        background: transparent;
-        border: none;
-        color: #cccccc;
-        cursor: pointer;
-        font-size: 16px;
-        padding: 4px 8px;
-        border-radius: 4px;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .ai-btn.danger:hover {
-        background: rgba(244, 67, 54, 0.15);
-        color: #ff6b6b;
-      }
-
-      .ai-btn:hover {
-        background: #3e3e42;
-      }
-
-      .ai-chat-container {
-        flex: 1;
-        overflow-y: auto;
-        padding: 15px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .ai-welcome {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 40px 20px;
-        text-align: center;
-        gap: 12px;
-      }
-
-      .ai-welcome h3 {
-        font-size: 20px;
-        color: #ffffff;
-        margin: 0;
-      }
-
-      .ai-icon svg {
-        width: 48px;
-        height: 48px;
-        opacity: 0.3;
-      }
-
-      .ai-welcome p {
-        font-size: 14px;
-        color: #858585;
-        margin: 0;
-      }
-
-      .ai-quick-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-top: 20px;
-        width: 100%;
-      }
-
-      .ai-quick-btn {
-        padding: 12px;
-        background: #2d2d30;
-        border: 1px solid #3e3e42;
-        border-radius: 6px;
-        color: #cccccc;
-        cursor: pointer;
-        font-size: 13px;
-        transition: all 0.2s;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 6px;
-      }
-
-      .ai-quick-btn:hover {
-        background: #3e3e42;
-        border-color: #667eea;
-      }
-
-      .ai-quick-btn span:first-child {
-        font-size: 24px;
-      }
-
-      .ai-message {
-        padding: 12px;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        animation: slideIn 0.3s ease;
-      }
-
-      @keyframes slideIn {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      .ai-message.user {
-        background: #094771;
-        color: #ffffff;
-        margin-left: 20px;
-        align-self: flex-end;
-      }
-
-      .ai-message.assistant {
-        background: #2d2d30;
-        color: #cccccc;
-        margin-right: 20px;
-        border: 1px solid #3e3e42;
-      }
-
-      .ai-message.error {
-        background: #5a1d1d;
-        color: #f48771;
-        border: 1px solid #8b1e1e;
-      }
-
-      .ai-message.loading {
-        background: #2d2d30;
-        color: #858585;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .ai-message-header {
-        font-size: 11px;
-        font-weight: 600;
-        margin-bottom: 6px;
-        opacity: 0.7;
-      }
-
-      .ai-message-content {
-        font-size: 13px;
-        line-height: 1.5;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-      }
-
-      .ai-message-content code {
-        background: rgba(0, 0, 0, 0.3);
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-family: "Consolas", monospace;
-        font-size: 12px;
-      }
-
-      .ai-message-content pre {
-        background: #1e1e1e;
-        padding: 12px;
-        border-radius: 6px;
-        overflow-x: auto;
-        margin: 8px 0;
-      }
-
-      .ai-message-content pre code {
-        background: none;
-        padding: 0;
-      }
-
-      .ai-loading-dots {
-        display: flex;
-        gap: 4px;
-      }
-
-      .ai-loading-dots span {
-        width: 8px;
-        height: 8px;
-        background: #667eea;
-        border-radius: 50%;
-        animation: bounce 1.4s infinite ease-in-out both;
-      }
-
-      .ai-loading-dots span:nth-child(1) {
-        animation-delay: -0.32s;
-      }
-
-      .ai-loading-dots span:nth-child(2) {
-        animation-delay: -0.16s;
-      }
-
-      @keyframes bounce {
-        0%,
-        80%,
-        100% {
-          transform: scale(0);
-        }
-
-        40% {
-          transform: scale(1);
-        }
-      }
-
-      .ai-input-container {
-        padding: 12px;
-        background: #2d2d30;
-        border-top: 1px solid #3e3e42;
-        display: flex;
-        gap: 8px;
-        align-items: flex-end;
-      }
-
-      .ai-model-quick {
-        width: 170px;
-        background: #3c3c3c;
-        border: 1px solid #555;
-        color: #cccccc;
-        border-radius: 6px;
-        padding: 8px 10px;
-        font-size: 12px;
-        height: 38px;
-      }
-
-      .ai-model-quick:focus {
-        outline: none;
-        border-color: #667eea;
-      }
-
-      .ai-input {
-        flex: 1;
-        background: #3c3c3c;
-        border: 1px solid #555;
-        color: #ffffff;
-        border-radius: 6px;
-        padding: 10px 12px;
-        font-size: 13px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Oxygen, Ubuntu, Cantarell, sans-serif;
-        resize: none;
-        max-height: 120px;
-        overflow-y: auto;
-      }
-
-      .ai-input:focus {
-        outline: none;
-        border-color: #667eea;
-      }
-
-      .ai-send-btn {
-        background: #667eea;
-        border: none;
-        color: white;
-        cursor: pointer;
-        border-radius: 6px;
-        padding: 10px 12px;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .ai-send-btn:hover {
-        background: #5568d3;
-      }
-
-      .ai-send-btn:disabled {
-        background: #3e3e42;
-        cursor: not-allowed;
-        opacity: 0.5;
-      }
-
-      .ai-modal-content {
-        width: 600px;
-      }
-
-      .ai-toggle-btn {
-        position: fixed;
-        right: 20px;
-        bottom: 20px;
-        width: 56px;
-        height: 56px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        border-radius: 50%;
-        color: white;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        transition: all 0.3s;
-        z-index: 1400;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .ai-toggle-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
-      }
-
-      .ai-toggle-btn svg {
-        width: 28px;
-        height: 28px;
-      }
-    </style>
-  </head>
-
-  <body>
-    <div class="app-container">
-      <div class="titlebar">
-        <div class="titlebar-left">
-          <div class="titlebar-logo">
-            <div class="logo-icon">
-              <img src="logoname.png" alt="ByteCode Logo" />
-            </div>
-            <!-- Custom Menu Bar -->
-            <div class="menubar">
-              <div class="menu-item" id="menu-file">
-              File
-              <div class="dropdown-menu">
-                <div
-                  class="dropdown-item"
-                  id="menu-file-new"
-                  onclick="createNewFile()"
-                >
-                  New File <span class="shortcut">Ctrl+N</span>
-                </div>
-                <div
-                  class="dropdown-item"
-                  id="menu-file-open"
-                  onclick="openFile()"
-                >
-                  Open File <span class="shortcut">Ctrl+O</span>
-                </div>
-                <div
-                  class="dropdown-item"
-                  id="menu-file-open-folder"
-                  onclick="openFolder()"
-                >
-                  Open Folder
-                  <span class="shortcut">Ctrl+Shift+O</span>
-                </div>
-                <div class="dropdown-separator"></div>
-                <div
-                  class="dropdown-item"
-                  id="menu-file-save"
-                  onclick="saveCurrentFile()"
-                >
-                  Save <span class="shortcut">Ctrl+S</span>
-                </div>
-                <div
-                  class="dropdown-item"
-                  id="menu-file-save-as"
-                  onclick="saveFileAs()"
-                >
-                  Save As... <span class="shortcut">Ctrl+Shift+S</span>
-                </div>
-                <div class="dropdown-separator"></div>
-                <div
-                  class="dropdown-item"
-                  id="menu-file-settings"
-                  onclick="openSettings()"
-                >
-                  Settings
-                </div>
-                <div
-                  class="dropdown-item"
-                  id="menu-file-exit"
-                  onclick="closeApp()"
-                >
-                  Exit <span class="shortcut">Ctrl+Q</span>
-                </div>
-              </div>
-            </div>
-            <div class="menu-item" id="menu-edit">
-              Edit
-              <div class="dropdown-menu">
-                <div
-                  class="dropdown-item"
-                  id="menu-edit-undo"
-                  onclick="triggerEdit('undo')"
-                >
-                  Undo <span class="shortcut">Ctrl+Z</span>
-                </div>
-                <div
-                  class="dropdown-item"
-                  id="menu-edit-redo"
-                  onclick="triggerEdit('redo')"
-                >
-                  Redo <span class="shortcut">Ctrl+Y</span>
-                </div>
-                <div class="dropdown-separator"></div>
-                <div
-                  class="dropdown-item"
-                  id="menu-edit-cut"
-                  onclick="triggerEdit('cut')"
-                >
-                  Cut <span class="shortcut">Ctrl+X</span>
-                </div>
-                <div
-                  class="dropdown-item"
-                  id="menu-edit-copy"
-                  onclick="triggerEdit('copy')"
-                >
-                  Copy <span class="shortcut">Ctrl+C</span>
-                </div>
-                <div
-                  class="dropdown-item"
-                  id="menu-edit-paste"
-                  onclick="triggerEdit('paste')"
-                >
-                  Paste <span class="shortcut">Ctrl+V</span>
-                </div>
-              </div>
-            </div>
-            <div class="menu-item" id="menu-view">
-              View
-              <div class="dropdown-menu">
-                <div
-                  class="dropdown-item"
-                  id="menu-view-toggle-terminal"
-                  onclick="toggleTerminal()"
-                >
-                  Toggle Terminal <span class="shortcut">Ctrl+`</span>
-                </div>
-                <div
-                  class="dropdown-item"
-                  id="menu-view-toggle-fullscreen"
-                  onclick="toggleFullScreen()"
-                >
-                  Toggle Full Screen <span class="shortcut">F11</span>
-                </div>
-              </div>
-            </div>
-            <div class="menu-item" id="menu-help">
-              Help
-              <div class="dropdown-menu">
-                <div
-                  class="dropdown-item"
-                  id="menu-help-about"
-                  onclick="showAbout()"
-                >
-                  About ByteCode
-                </div>
-              </div>
-              </div>
-            </div>
+        transform: translateY(0);
+      }
+    }
+
+    .ai-message.user {
+      background: #094771;
+      color: #ffffff;
+      margin-left: 20px;
+      align-self: flex-end;
+    }
+
+    .ai-message.assistant {
+      background: #2d2d30;
+      color: #cccccc;
+      margin-right: 20px;
+      border: 1px solid #3e3e42;
+    }
+
+    .ai-message.error {
+      background: #5a1d1d;
+      color: #f48771;
+      border: 1px solid #8b1e1e;
+    }
+
+    .ai-message.loading {
+      background: #2d2d30;
+      color: #858585;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ai-message-header {
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      opacity: 0.7;
+    }
+
+    .ai-message-content {
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .ai-message-content code {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: "Consolas", monospace;
+      font-size: 12px;
+    }
+
+    .ai-message-content pre {
+      background: #1e1e1e;
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+
+    .ai-message-content pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .ai-loading-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .ai-loading-dots span {
+      width: 8px;
+      height: 8px;
+      background: #667eea;
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+
+    .ai-loading-dots span:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    .ai-loading-dots span:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+
+    @keyframes bounce {
+
+      0%,
+      80%,
+      100% {
+        transform: scale(0);
+      }
+
+      40% {
+        transform: scale(1);
+      }
+    }
+
+    .ai-input-container {
+      padding: 12px;
+      background: #2d2d30;
+      border-top: 1px solid #3e3e42;
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    .ai-model-quick {
+      width: 170px;
+      background: #3c3c3c;
+      border: 1px solid #555;
+      color: #cccccc;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 12px;
+      height: 38px;
+    }
+
+    .ai-model-quick:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .ai-input {
+      flex: 1;
+      background: #3c3c3c;
+      border: 1px solid #555;
+      color: #ffffff;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Oxygen, Ubuntu, Cantarell, sans-serif;
+      resize: none;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .ai-input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .ai-send-btn {
+      background: #667eea;
+      border: none;
+      color: white;
+      cursor: pointer;
+      border-radius: 6px;
+      padding: 10px 12px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ai-send-btn:hover {
+      background: #5568d3;
+    }
+
+    .ai-send-btn:disabled {
+      background: #3e3e42;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .ai-modal-content {
+      width: 600px;
+    }
+
+    .ai-toggle-btn {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      transition: all 0.3s;
+      z-index: 1400;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ai-toggle-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+    }
+
+    .ai-toggle-btn svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    /* Terminal Resizer */
+    .terminal-resizer {
+      height: 4px;
+      background: transparent;
+      cursor: ns-resize;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .terminal-resizer:hover,
+    .terminal-resizer.resizing {
+      background: #007acc;
+    }
+
+    /* AI Panel Resizer */
+    .ai-resizer {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: transparent;
+      cursor: ew-resize;
+      transition: background 0.2s;
+      z-index: 10;
+    }
+
+    .ai-resizer:hover,
+    .ai-resizer.resizing {
+      background: #007acc;
+    }
+
+    /* AI panel positioning */
+    .ai-panel.open {
+      right: 0;
+    }
+
+    /* Notifications */
+    .notification {
+      padding: 12px 16px;
+      border-radius: 6px;
+      background: #2d2d30;
+      border: 1px solid #3e3e42;
+      color: #cccccc;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-width: 250px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      animation: slideInRight 0.3s ease;
+    }
+
+    .notification-success {
+      border-color: #4caf50;
+      background: #1b3d1b;
+    }
+
+    .notification-error {
+      border-color: #f44336;
+      background: #3d1b1b;
+    }
+
+    .notification-info {
+      border-color: #2196f3;
+      background: #1b2d3d;
+    }
+
+    .notification button {
+      background: transparent;
+      border: none;
+      color: #cccccc;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 0;
+      line-height: 1;
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(100px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    /* Extension sidebar panels */
+    .ext-sidebar-panel {
+      border-top: 1px solid #3e3e42;
+    }
+
+    .ext-panel-header {
+      padding: 10px 15px;
+      background: #2d2d30;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #cccccc;
+    }
+
+    .ext-panel-header:hover {
+      background: #3e3e42;
+    }
+
+    .ext-panel-arrow {
+      transition: transform 0.2s;
+    }
+
+    .ext-sidebar-panel.collapsed .ext-panel-arrow {
+      transform: rotate(-90deg);
+    }
+
+    .ext-sidebar-panel.collapsed .ext-panel-content {
+      display: none;
+    }
+
+    .ext-panel-content {
+      padding: 10px;
+    }
+
+    /* Fix AI input focus issues */
+    .ai-input {
+      -webkit-user-select: text !important;
+      user-select: text !important;
+    }
+
+    .ai-input:focus {
+      outline: none;
+      border-color: #667eea;
+      -webkit-user-select: text !important;
+      user-select: text !important;
+    }
+
+    /* Ensure inputs are always interactive */
+    .ai-panel input,
+    .ai-panel textarea,
+    .ai-panel button,
+    .ai-panel select {
+      pointer-events: auto !important;
+      -webkit-user-select: text;
+      user-select: text;
+    }
+
+    /* GLOBAL FIX: All inputs must ALWAYS be interactive */
+    input,
+    textarea,
+    select,
+    [contenteditable="true"] {
+      -webkit-user-select: text !important;
+      user-select: text !important;
+      pointer-events: auto !important;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      -webkit-user-select: text !important;
+      user-select: text !important;
+      outline: none;
+      border-color: #667eea !important;
+    }
+
+    /* Modal inputs always on top and accessible */
+    .modal input,
+    .modal textarea,
+    .modal select {
+      position: relative;
+      z-index: 10001;
+      -webkit-user-select: text !important;
+      user-select: text !important;
+      pointer-events: auto !important;
+    }
+
+    /* Prevent body user-select from affecting inputs */
+    body.resizing input,
+    body.resizing textarea,
+    body.resizing select {
+      -webkit-user-select: text !important;
+      user-select: text !important;
+      pointer-events: auto !important;
+    }
+
+    /* Better modal styling */
+    .modal {
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+      animation: modalSlideIn 0.2s ease-out;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .modal-input:focus {
+      border-color: #667eea !important;
+      box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    }
+
+    /* Input modal specific fixes */
+    #input-modal {
+      z-index: 10000 !important;
+    }
+
+    #input-modal .modal-content {
+      z-index: 10001;
+    }
+
+    #input-modal-input {
+      z-index: 10002 !important;
+      -webkit-user-select: text !important;
+      user-select: text !important;
+      pointer-events: auto !important;
+      caret-color: #667eea;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-container">
+    <div class="titlebar">
+      <div class="titlebar-left">
+        <div class="titlebar-logo">
+          <div class="logo-icon">
+            <img src="logoname.png" alt="ByteCode Logo" />
           </div>
         </div>
-
-        <div class="titlebar-spacer"></div>
-
-        <div class="titlebar-right">
-          <div class="titlebar-file" id="titlebar-file"></div>
-          <div class="window-controls">
-            <button class="window-btn" id="window-minimize" title="Minimize">
-              <svg viewBox="0 0 12 12" fill="currentColor">
-                <rect x="2" y="6" width="8" height="1" rx="0.5" />
-              </svg>
-            </button>
-            <button class="window-btn" id="window-maximize" title="Maximize">
-              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1">
-                <rect x="2.5" y="2.5" width="7" height="7" />
-              </svg>
-            </button>
-            <button class="window-btn close" id="window-close" title="Close">
-              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
-                <path d="M3 3 L9 9" />
-                <path d="M9 3 L3 9" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="main-content">
-        <div class="sidebar" id="sidebar">
-          <div class="sidebar-header">
-            <div class="sidebar-title" id="sidebar-title">Explorer</div>
-            <div class="sidebar-actions">
-              <button
-                class="sidebar-btn"
-                onclick="showNewFileDialog()"
-                title="New File"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M9.5 1.1v3.4h3.4L9.5 1.1zM10 0H2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6l-6-6zM8 12H7V9H4V8h3V5h1v3h3v1H8v3z"
-                  />
-                </svg>
-              </button>
-              <button
-                class="sidebar-btn"
-                onclick="showNewFolderDialog()"
-                title="New Folder"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M14 4H8l-1-2H2a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2zm-3 6H9v2H7v-2H5V8h2V6h2v2h2v2z"
-                  />
-                </svg>
-              </button>
-              <button
-                class="sidebar-btn"
-                onclick="openFolder()"
-                title="Open Folder"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M1 3.5A1.5 1.5 0 012.5 2h2.764a1.5 1.5 0 011.025.404l1.422 1.322H13.5A1.5 1.5 0 0115 5.226V6H1V3.5zM.5 7h15l-1.5 7H2L.5 7z"
-                  />
-                </svg>
-              </button>
-              <button
-                class="sidebar-btn"
-                onclick="refreshFolder()"
-                title="Refresh"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                >
-                  <path
-                    d="M13.5 2a.5.5 0 01.5.5V5h-2.5a.5.5 0 010-1H13V2.5a.5.5 0 01.5-.5zM2.5 14a.5.5 0 01-.5-.5V11h2.5a.5.5 0 010 1H3v1.5a.5.5 0 01-.5.5z"
-                  />
-                  <path
-                    d="M8 3a5 5 0 104.546 2.914.5.5 0 01.908-.418A6 6 0 118 2v1z"
-                  />
-                  <path
-                    d="M8 13A5 5 0 113.454 10.086a.5.5 0 01-.908.418A6 6 0 108 14v-1z"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-          <div id="folder-tree" class="folder-tree">
-            <div class="no-folder">
-              <p id="no-folder-p">No folder opened</p>
-              <button
-                class="no-folder-btn"
-                id="no-folder-btn"
-                onclick="openFolder()"
-              >
+        <!-- Custom Menu Bar -->
+        <div class="menubar">
+          <div class="menu-item" id="menu-file">
+            File
+            <div class="dropdown-menu">
+              <div class="dropdown-item" id="menu-file-new" onclick="createNewFile()">
+                New File <span class="shortcut">Ctrl+N</span>
+              </div>
+              <div class="dropdown-item" id="menu-file-open" onclick="openFile()">
+                Open File <span class="shortcut">Ctrl+O</span>
+              </div>
+              <div class="dropdown-item" id="menu-file-open-folder" onclick="openFolder()">
                 Open Folder
-              </button>
+                <span class="shortcut">Ctrl+Shift+O</span>
+              </div>
+              <div class="dropdown-separator"></div>
+              <div class="dropdown-item" id="menu-file-save" onclick="saveCurrentFile()">
+                Save <span class="shortcut">Ctrl+S</span>
+              </div>
+              <div class="dropdown-item" id="menu-file-save-as" onclick="saveFileAs()">
+                Save As... <span class="shortcut">Ctrl+Shift+S</span>
+              </div>
+              <div class="dropdown-separator"></div>
+              <div class="dropdown-item" id="menu-file-settings" onclick="openSettings()">
+                Settings
+              </div>
+              <div class="dropdown-item" id="menu-file-exit" onclick="closeApp()">
+                Exit <span class="shortcut">Ctrl+Q</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="sidebar-resizer" id="sidebar-resizer"></div>
-
-        <div class="editor-container">
-          <div class="editor-tabs" id="editor-tabs"></div>
-          <div id="welcome-screen" class="welcome-screen">
-            <div class="welcome-logo">
-              <img src="logoname.png" alt="ByteCode Logo" />
-            </div>
-            <h1 class="welcome-title" id="welcome-title">ByteCode</h1>
-            <p class="welcome-subtitle" id="welcome-subtitle">
-              Modern and powerful code editor
-            </p>
-            <div class="welcome-actions">
-              <button
-                class="welcome-btn"
-                id="welcome-new-file-btn"
-                onclick="createNewFile()"
-              >
-                New File
-              </button>
-              <button
-                class="welcome-btn secondary"
-                id="welcome-open-folder-btn"
-                onclick="openFolder()"
-              >
-                Open Folder
-              </button>
+          <div class="menu-item" id="menu-edit">
+            Edit
+            <div class="dropdown-menu">
+              <div class="dropdown-item" id="menu-edit-undo" onclick="triggerEdit('undo')">
+                Undo <span class="shortcut">Ctrl+Z</span>
+              </div>
+              <div class="dropdown-item" id="menu-edit-redo" onclick="triggerEdit('redo')">
+                Redo <span class="shortcut">Ctrl+Y</span>
+              </div>
+              <div class="dropdown-separator"></div>
+              <div class="dropdown-item" id="menu-edit-cut" onclick="triggerEdit('cut')">
+                Cut <span class="shortcut">Ctrl+X</span>
+              </div>
+              <div class="dropdown-item" id="menu-edit-copy" onclick="triggerEdit('copy')">
+                Copy <span class="shortcut">Ctrl+C</span>
+              </div>
+              <div class="dropdown-item" id="menu-edit-paste" onclick="triggerEdit('paste')">
+                Paste <span class="shortcut">Ctrl+V</span>
+              </div>
             </div>
           </div>
-          <div id="editor"></div>
-          <div id="preview-container">
-            <div id="preview-content"></div>
-            <p class="preview-msg" id="preview-msg"></p>
+          <div class="menu-item" id="menu-view">
+            View
+            <div class="dropdown-menu">
+              <div class="dropdown-item" id="menu-view-toggle-terminal" onclick="toggleTerminal()">
+                Toggle Terminal <span class="shortcut">Ctrl+`</span>
+              </div>
+              <div class="dropdown-item" id="menu-view-toggle-fullscreen" onclick="toggleFullScreen()">
+                Toggle Full Screen <span class="shortcut">F11</span>
+              </div>
+            </div>
           </div>
-          <div id="terminal-container"></div>
+          <div class="menu-item" id="menu-extensions">
+            Extensions
+            <div class="dropdown-menu">
+              <div class="dropdown-item" onclick="openExtensionsPanel()">
+                Manage Extensions
+              </div>
+              <div class="dropdown-item" onclick="installExtensionDialog()">
+                Install Extension (.bcext)
+              </div>
+              <div class="dropdown-separator"></div>
+              <div class="dropdown-item" onclick="openExtensionsFolder()">
+                Open Extensions Folder
+              </div>
+            </div>
+          </div>
+          <div class="menu-item" id="menu-help">
+            Help
+            <div class="dropdown-menu">
+              <div class="dropdown-item" id="menu-help-about" onclick="showAbout()">
+                About ByteCode
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="statusbar">
-        <div class="statusbar-item">
-          <span id="statusbar-line">Ln 1, Col 1</span>
-        </div>
-        <div class="statusbar-item">
-          <span id="statusbar-lang">Plain Text</span>
-        </div>
-        <div class="statusbar-item">
-          <span id="statusbar-encoding">UTF-8</span>
+      <div class="titlebar-spacer"></div>
+
+      <div class="titlebar-right">
+        <div class="titlebar-file" id="titlebar-file"></div>
+        <div class="window-controls">
+          <button class="window-btn" id="window-minimize" title="Minimize">
+            <svg viewBox="0 0 12 12" fill="currentColor">
+              <rect x="2" y="6" width="8" height="1" rx="0.5" />
+            </svg>
+          </button>
+          <button class="window-btn" id="window-maximize" title="Maximize">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1">
+              <rect x="2.5" y="2.5" width="7" height="7" />
+            </svg>
+          </button>
+          <button class="window-btn close" id="window-close" title="Close">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+              <path d="M3 3 L9 9" />
+              <path d="M9 3 L3 9" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- AI Toggle Button -->
-    <button
-      class="ai-toggle-btn"
-      id="ai-toggle-btn"
-      onclick="toggleAIPanel()"
-      title="AI Assistant"
-    >
-      <img src="assets/icons/aiicon.svg" style="width: 28px; height: 28px" />
-    </button>
-
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <div class="modal-title" id="settings-title">Settings</div>
-          <button class="modal-close" onclick="closeSettings()">×</button>
-        </div>
-        <div class="modal-body">
-          <div class="setting-item">
-            <label class="setting-checkbox">
-              <input
-                type="checkbox"
-                id="setting-autosave"
-                onchange="toggleAutoSave()"
-              />
-              <span id="setting-autosave-span">Auto Save</span>
-            </label>
-          </div>
-          <div class="setting-item">
-            <label class="setting-checkbox">
-              <input
-                type="checkbox"
-                id="setting-ai-enabled"
-                onchange="toggleAIEnabled()"
-              />
-              <span id="setting-ai-enabled-span">Enable AI Assistant</span>
-            </label>
-          </div>
-          <div class="setting-item">
-            <label class="setting-label" id="setting-language-label"
-              >Language</label
-            >
-            <select
-              class="setting-control"
-              id="setting-language"
-              onchange="changeLanguage()"
-            >
-              <option value="en">English</option>
-              <option value="fr">Français (Beta) (Not finished)</option>
-            </select>
-          </div>
-          <div class="setting-item">
-            <label class="setting-label" id="setting-theme-label">Theme</label>
-            <select
-              class="setting-control"
-              id="setting-theme"
-              onchange="changeTheme()"
-            >
-              <option value="vs-dark">Dark</option>
-              <option value="vs-light">Light</option>
-              <option value="hc-black">High Contrast</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Context Menu -->
-    <div id="context-menu" class="context-menu">
-      <div
-        id="context-new-file"
-        class="context-item"
-        onclick="contextNewFile()"
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-          <path
-            d="M9.5 1.1v3.4h3.4L9.5 1.1zM10 0H2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6l-6-6z"
-          />
-        </svg>
-        <span id="context-new-file-label">New File</span>
-      </div>
-      <div
-        id="context-new-folder"
-        class="context-item"
-        onclick="contextNewFolder()"
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-          <path
-            d="M14 4H8l-1-2H2a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2z"
-          />
-        </svg>
-        <span id="context-new-folder-label">New Folder</span>
-      </div>
-      <div class="context-separator"></div>
-      <div id="context-rename" class="context-item" onclick="contextRename()">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-          <path
-            d="M12.146.146a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-10 10a.5.5 0 01-.168.11l-5 2a.5.5 0 01-.65-.65l2-5a.5.5 0 01.11-.168l10-10z"
-          />
-        </svg>
-        <span id="context-rename-label">Rename</span>
-      </div>
-      <div id="context-delete" class="context-item" onclick="contextDelete()">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-          <path
-            d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"
-          />
-          <path
-            d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"
-          />
-        </svg>
-        <span id="context-delete-label">Delete</span>
-      </div>
-
-      <div class="context-separator"></div>
-      <div
-        id="context-copy-path"
-        class="context-item"
-        onclick="contextCopyPath()"
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-          <path
-            d="M4 1.5H3a2 2 0 00-2 2V14a2 2 0 002 2h10a2 2 0 002-2V3.5a2 2 0 00-2-2h-1v1h1a1 1 0 011 1V14a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1h1v-1z"
-          />
-          <path
-            d="M9.5 1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-3a.5.5 0 01-.5-.5v-1a.5.5 0 01.5-.5h3z"
-          />
-        </svg>
-        Copy Path
-      </div>
-    </div>
-
-    <!-- New File/Folder Modal -->
-    <div id="input-modal" class="modal">
-      <div class="modal-content modal-small">
-        <div class="modal-header">
-          <div class="modal-title" id="input-modal-title">New File</div>
-          <button class="modal-close" onclick="closeInputModal()">×</button>
-        </div>
-        <div class="modal-body">
-          <input
-            type="text"
-            id="input-modal-input"
-            class="modal-input"
-            placeholder="Enter name..."
-            onkeydown="handleInputModalKey(event)"
-          />
-          <div class="modal-buttons">
-            <button class="modal-btn secondary" onclick="closeInputModal()">
-              Cancel
+    <div class="main-content">
+      <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title" id="sidebar-title">Explorer</div>
+          <div class="sidebar-actions">
+            <button class="sidebar-btn" onclick="showNewFileDialog()" title="New File">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path
+                  d="M9.5 1.1v3.4h3.4L9.5 1.1zM10 0H2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6l-6-6zM8 12H7V9H4V8h3V5h1v3h3v1H8v3z" />
+              </svg>
             </button>
-            <button class="modal-btn primary" onclick="confirmInputModal()">
-              Create
+            <button class="sidebar-btn" onclick="showNewFolderDialog()" title="New Folder">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path
+                  d="M14 4H8l-1-2H2a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2zm-3 6H9v2H7v-2H5V8h2V6h2v2h2v2z" />
+              </svg>
+            </button>
+            <button class="sidebar-btn" onclick="openFolder()" title="Open Folder">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path
+                  d="M1 3.5A1.5 1.5 0 012.5 2h2.764a1.5 1.5 0 011.025.404l1.422 1.322H13.5A1.5 1.5 0 0115 5.226V6H1V3.5zM.5 7h15l-1.5 7H2L.5 7z" />
+              </svg>
+            </button>
+            <button class="sidebar-btn" onclick="refreshFolder()" title="Refresh">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path
+                  d="M13.5 2a.5.5 0 01.5.5V5h-2.5a.5.5 0 010-1H13V2.5a.5.5 0 01.5-.5zM2.5 14a.5.5 0 01-.5-.5V11h2.5a.5.5 0 010 1H3v1.5a.5.5 0 01-.5.5z" />
+                <path d="M8 3a5 5 0 104.546 2.914.5.5 0 01.908-.418A6 6 0 118 2v1z" />
+                <path d="M8 13A5 5 0 113.454 10.086a.5.5 0 01-.908.418A6 6 0 108 14v-1z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div id="folder-tree" class="folder-tree">
+          <div class="no-folder">
+            <p id="no-folder-p">No folder opened</p>
+            <button class="no-folder-btn" id="no-folder-btn" onclick="openFolder()">
+              Open Folder
             </button>
           </div>
         </div>
       </div>
+      <div class="sidebar-resizer" id="sidebar-resizer"></div>
+
+      <div class="editor-container">
+        <div class="editor-tabs" id="editor-tabs"></div>
+        <div id="welcome-screen" class="welcome-screen">
+          <div class="welcome-logo">
+            <img src="logoname.png" alt="ByteCode Logo" />
+          </div>
+          <h1 class="welcome-title" id="welcome-title">ByteCode</h1>
+          <p class="welcome-subtitle" id="welcome-subtitle">
+            Modern and powerful code editor
+          </p>
+          <div class="welcome-actions">
+            <button class="welcome-btn" id="welcome-new-file-btn" onclick="createNewFile()">
+              New File
+            </button>
+            <button class="welcome-btn secondary" id="welcome-open-folder-btn" onclick="openFolder()">
+              Open Folder
+            </button>
+          </div>
+        </div>
+        <div id="editor"></div>
+        <div id="preview-container">
+          <div id="preview-content"></div>
+          <p class="preview-msg" id="preview-msg"></p>
+        </div>
+        <div class="terminal-resizer" id="terminal-resizer"></div>
+        <div id="terminal-container"></div>
+      </div>
     </div>
 
-    <!-- AI Assistant Panel -->
-    <div id="ai-panel" class="ai-panel">
-      <div class="ai-header">
-        <div class="ai-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <div class="statusbar">
+      <div class="statusbar-item">
+        <span id="statusbar-line">Ln 1, Col 1</span>
+      </div>
+      <div class="statusbar-item">
+        <span id="statusbar-lang">Plain Text</span>
+      </div>
+      <div class="statusbar-item">
+        <span id="statusbar-encoding">UTF-8</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Toggle Button -->
+  <button class="ai-toggle-btn" id="ai-toggle-btn" onclick="toggleAIPanel()" title="AI Assistant">
+    <img src="assets/icons/aiicon.svg" style="width: 28px; height: 28px" />
+  </button>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="settings-title">Settings</div>
+        <button class="modal-close" onclick="closeSettings()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-item">
+          <label class="setting-checkbox">
+            <input type="checkbox" id="setting-autosave" onchange="toggleAutoSave()" />
+            <span id="setting-autosave-span">Auto Save</span>
+          </label>
+        </div>
+        <div class="setting-item">
+          <label class="setting-checkbox">
+            <input type="checkbox" id="setting-ai-enabled" onchange="toggleAIEnabled()" />
+            <span id="setting-ai-enabled-span">Enable AI Assistant</span>
+          </label>
+        </div>
+        <div class="setting-item">
+          <label class="setting-label" id="setting-language-label">Language</label>
+          <select class="setting-control" id="setting-language" onchange="changeLanguage()">
+            <option value="en">English</option>
+            <option value="fr">Français (Beta) (Not finished)</option>
+          </select>
+        </div>
+        <div class="setting-item">
+          <label class="setting-label" id="setting-theme-label">Theme</label>
+          <select class="setting-control" id="setting-theme" onchange="changeTheme()">
+            <option value="vs-dark">Dark</option>
+            <option value="vs-light">Light</option>
+            <option value="hc-black">High Contrast</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div id="context-menu" class="context-menu">
+    <div id="context-new-file" class="context-item" onclick="contextNewFile()">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M9.5 1.1v3.4h3.4L9.5 1.1zM10 0H2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6l-6-6z" />
+      </svg>
+      <span id="context-new-file-label">New File</span>
+    </div>
+    <div id="context-new-folder" class="context-item" onclick="contextNewFolder()">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M14 4H8l-1-2H2a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2z" />
+      </svg>
+      <span id="context-new-folder-label">New Folder</span>
+    </div>
+    <div class="context-separator"></div>
+    <div id="context-rename" class="context-item" onclick="contextRename()">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <path
+          d="M12.146.146a.5.5 0 01.708 0l3 3a.5.5 0 010 .708l-10 10a.5.5 0 01-.168.11l-5 2a.5.5 0 01-.65-.65l2-5a.5.5 0 01.11-.168l10-10z" />
+      </svg>
+      <span id="context-rename-label">Rename</span>
+    </div>
+    <div id="context-delete" class="context-item" onclick="contextDelete()">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <path
+          d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z" />
+        <path
+          d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
+      </svg>
+      <span id="context-delete-label">Delete</span>
+    </div>
+
+    <div class="context-separator"></div>
+    <div id="context-copy-path" class="context-item" onclick="contextCopyPath()">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <path
+          d="M4 1.5H3a2 2 0 00-2 2V14a2 2 0 002 2h10a2 2 0 002-2V3.5a2 2 0 00-2-2h-1v1h1a1 1 0 011 1V14a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1h1v-1z" />
+        <path d="M9.5 1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-3a.5.5 0 01-.5-.5v-1a.5.5 0 01.5-.5h3z" />
+      </svg>
+      Copy Path
+    </div>
+  </div>
+
+  <!-- New File/Folder Modal -->
+  <div id="input-modal" class="modal">
+    <div class="modal-content modal-small">
+      <div class="modal-header">
+        <div class="modal-title" id="input-modal-title">New File</div>
+        <button class="modal-close" onclick="closeInputModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="text" id="input-modal-input" class="modal-input" placeholder="Enter name..."
+          onkeydown="handleInputModalKey(event)" />
+        <div class="modal-buttons">
+          <button class="modal-btn secondary" onclick="closeInputModal()">
+            Cancel
+          </button>
+          <button class="modal-btn primary" onclick="confirmInputModal()">
+            Create
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Assistant Panel -->
+  <div id="ai-panel" class="ai-panel">
+    <div class="ai-resizer" id="ai-resizer"></div>
+    <div class="ai-header">
+      <div class="ai-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path
+            d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 18c-3.87-.78-7-4.61-7-9V8.3l7-3.11v14.82z" />
+        </svg>
+        <span id="ai-title-text">AI Assistant</span>
+      </div>
+      <div class="ai-actions">
+        <button class="ai-btn" onclick="openAISettings()" title="AI Settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path
-              d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 18c-3.87-.78-7-4.61-7-9V8.3l7-3.11v14.82z"
-            />
+              d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66z" />
           </svg>
-          <span id="ai-title-text">AI Assistant</span>
-        </div>
-        <div class="ai-actions">
-          <button class="ai-btn" onclick="openAISettings()" title="AI Settings">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path
-                d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66z"
-              />
-            </svg>
-          </button>
-          <button class="ai-btn" onclick="clearAIChat()" title="Clear Chat">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M9 3V4H4V6H5V20A2 2 0 0 0 7 22H17A2 2 0 0 0 19 20V6H20V4H15V3H9ZM7 6H17V20H7V6ZM9 8V18H11V8H9ZM13 8V18H15V8H13Z" />
-            </svg>
-          </button>
-          <button class="ai-btn danger" onclick="toggleAIPanel()" title="Close">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-            </svg>
-          </button>
-        </div>
-      </div>
-      <div class="ai-chat-container" id="ai-chat-container">
-        <div class="ai-welcome">
-          <svg
-            width="48"
-            height="48"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            opacity="0.3"
-          >
+        </button>
+        <button class="ai-btn" onclick="clearAIChat()" title="Clear Chat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path
-              d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 18c-3.87-.78-7-4.61-7-9V8.3l7-3.11v14.82z"
-            />
+              d="M9 3V4H4V6H5V20A2 2 0 0 0 7 22H17A2 2 0 0 0 19 20V6H20V4H15V3H9ZM7 6H17V20H7V6ZM9 8V18H11V8H9ZM13 8V18H15V8H13Z" />
           </svg>
-          <h3 id="ai-welcome-title">AI Assistant</h3>
-          <p id="ai-welcome-subtitle">Ask me anything about your code!</p>
-          <div class="ai-quick-actions">
-            <button class="ai-quick-btn" onclick="aiQuickAction('explain')">
-              <span>💡</span> <span id="ai-quick-explain">Explain Code</span>
-            </button>
-            <button class="ai-quick-btn" onclick="aiQuickAction('fix')">
-              <span>🔧</span> <span id="ai-quick-fix">Fix Issues</span>
-            </button>
-            <button class="ai-quick-btn" onclick="aiQuickAction('refactor')">
-              <span>✨</span> <span id="ai-quick-refactor">Refactor</span>
-            </button>
-            <button class="ai-quick-btn" onclick="aiQuickAction('comment')">
-              <span>📝</span> <span id="ai-quick-comment">Add Comments</span>
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="ai-input-container">
-        <input
-          id="ai-model-quick"
-          class="ai-model-quick"
-          type="text"
-          placeholder="Model"
-          list="ai-model-list"
-        />
-        <textarea
-          id="ai-input"
-          class="ai-input"
-          placeholder="Ask AI..."
-          rows="1"
-        ></textarea>
-        <button class="ai-send-btn" onclick="sendAIMessage()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+        </button>
+        <button class="ai-btn danger" onclick="toggleAIPanel()" title="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
           </svg>
         </button>
       </div>
     </div>
-
-    <!-- AI Settings Modal -->
-    <div id="ai-settings-modal" class="modal">
-      <div class="modal-content ai-modal-content">
-        <div class="modal-header">
-          <div class="modal-title" id="ai-settings-title">AI Settings</div>
-          <button class="modal-close" onclick="closeAISettings()">×</button>
+    <div class="ai-chat-container" id="ai-chat-container">
+      <div class="ai-welcome">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" opacity="0.3">
+          <path
+            d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 18c-3.87-.78-7-4.61-7-9V8.3l7-3.11v14.82z" />
+        </svg>
+        <h3 id="ai-welcome-title">AI Assistant</h3>
+        <p id="ai-welcome-subtitle">Ask me anything about your code!</p>
+        <div class="ai-quick-actions">
+          <button class="ai-quick-btn" onclick="aiQuickAction('explain')">
+            <span>💡</span> <span id="ai-quick-explain">Explain Code</span>
+          </button>
+          <button class="ai-quick-btn" onclick="aiQuickAction('fix')">
+            <span>🔧</span> <span id="ai-quick-fix">Fix Issues</span>
+          </button>
+          <button class="ai-quick-btn" onclick="aiQuickAction('refactor')">
+            <span>✨</span> <span id="ai-quick-refactor">Refactor</span>
+          </button>
+          <button class="ai-quick-btn" onclick="aiQuickAction('comment')">
+            <span>📝</span> <span id="ai-quick-comment">Add Comments</span>
+          </button>
         </div>
-        <div class="modal-body">
-          <div class="setting-item">
-            <label class="setting-label" id="ai-provider-label"
-              >AI Provider</label
-            >
-            <select
-              class="setting-control"
-              id="ai-provider-select"
-              onchange="changeAIProvider()"
-            >
-              <option value="puter">Puter.js (Free but limited)</option>
-              <option value="ollama">Ollama (Local - No API Key)</option>
-              <option value="lmstudio">LM Studio (Local - No API Key)</option>
-              <option value="groq">Groq (Free with API Key)</option>
-              <option value="claude">Claude (Anthropic)</option>
-              <option value="openai">OpenAI</option>
-              <option value="gemini">Google Gemini</option>
-              <option value="openrouter">OpenRouter</option>
-            </select>
-            <small
-              style="
+      </div>
+    </div>
+    <div class="ai-input-container" style="flex-direction:column;align-items:stretch;gap:6px">
+      <textarea id="ai-input" class="ai-input" placeholder="Ask AI..." rows="1"></textarea>
+      <input id="ai-model-quick" class="ai-model-quick" type="text" placeholder="Model" list="ai-model-list" />
+      <button class="ai-send-btn" onclick="sendAIMessage()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- AI Settings Modal -->
+  <div id="ai-settings-modal" class="modal">
+    <div class="modal-content ai-modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="ai-settings-title">AI Settings</div>
+        <button class="modal-close" onclick="closeAISettings()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-item">
+          <label class="setting-label" id="ai-provider-label">AI Provider</label>
+          <select class="setting-control" id="ai-provider-select" onchange="changeAIProvider()">
+            <option value="puter">Puter.js (Free but limited)</option>
+            <option value="ollama">Ollama (Local - No API Key)</option>
+            <option value="lmstudio">LM Studio (Local - No API Key)</option>
+            <option value="groq">Groq (Free with API Key)</option>
+            <option value="claude">Claude (Anthropic)</option>
+            <option value="openai">OpenAI</option>
+            <option value="gemini">Google Gemini</option>
+            <option value="openrouter">OpenRouter</option>
+          </select>
+          <small style="
                 color: #858585;
                 font-size: 11px;
                 margin-top: 4px;
                 display: block;
-              "
-            >
-              <strong>Recommended:</strong> Ollama (free, local) or Groq (free
-              API key at console.groq.com)
-            </small>
-          </div>
+              ">
+            <strong>Recommended:</strong> Ollama (free, local) or Groq (free
+            API key at console.groq.com)
+          </small>
+        </div>
 
-          <div
-            id="ai-api-key-container"
-            class="setting-item"
-            style="display: none"
-          >
-            <label class="setting-label" id="ai-api-key-label">API Key</label>
-            <input
-              type="password"
-              class="setting-control"
-              id="ai-api-key-input"
-              placeholder="Enter your API key..."
-            />
-            <button
-              class="modal-btn primary"
-              style="margin-top: 8px"
-              onclick="saveAIApiKey()"
-            >
-              <span id="ai-save-key-btn">Save Key</span>
-            </button>
-          </div>
+        <div id="ai-api-key-container" class="setting-item" style="display: none">
+          <label class="setting-label" id="ai-api-key-label">API Key</label>
+          <input type="password" class="setting-control" id="ai-api-key-input" placeholder="Enter your API key..." />
+          <button class="modal-btn primary" style="margin-top: 8px" onclick="saveAIApiKey()">
+            <span id="ai-save-key-btn">Save Key</span>
+          </button>
+        </div>
 
-          <div class="setting-item">
-            <label class="setting-label" id="ai-model-label">Model</label>
-            <input
-              type="text"
-              class="setting-control"
-              id="ai-model-input"
-              placeholder="Model name"
-              list="ai-model-list"
-            />
-            <datalist id="ai-model-list"></datalist>
-          </div>
+        <div class="setting-item">
+          <label class="setting-label" id="ai-model-label">Model</label>
+          <input type="text" class="setting-control" id="ai-model-input" placeholder="Model name"
+            list="ai-model-list" />
+          <datalist id="ai-model-list"></datalist>
+        </div>
 
-          <div class="setting-item">
-            <label class="setting-label" id="ai-temperature-label"
-              >Temperature (0.0 - 1.0)</label
-            >
-            <input
-              type="range"
-              class="setting-control"
-              id="ai-temperature-input"
-              min="0"
-              max="1"
-              step="0.1"
-              value="0.7"
-            />
-            <span id="ai-temperature-value">0.7</span>
-          </div>
+        <div class="setting-item">
+          <label class="setting-label" id="ai-temperature-label">Temperature (0.0 - 1.0)</label>
+          <input type="range" class="setting-control" id="ai-temperature-input" min="0" max="1" step="0.1"
+            value="0.7" />
+          <span id="ai-temperature-value">0.7</span>
+        </div>
 
-          <div class="setting-item">
-            <label class="setting-label" id="ai-max-tokens-label"
-              >Max Tokens</label
-            >
-            <input
-              type="number"
-              class="setting-control"
-              id="ai-max-tokens-input"
-              value="4096"
-              min="256"
-              max="32768"
-            />
-          </div>
+        <div class="setting-item">
+          <label class="setting-label" id="ai-max-tokens-label">Max Tokens</label>
+          <input type="number" class="setting-control" id="ai-max-tokens-input" value="4096" min="256" max="32768" />
+        </div>
 
-          <div
-            id="ai-endpoint-container"
-            class="setting-item"
-            style="display: none"
-          >
-            <label class="setting-label" id="ai-endpoint-label"
-              >Endpoint URL</label
-            >
-            <input
-              type="text"
-              class="setting-control"
-              id="ai-endpoint-input"
-              placeholder="http://localhost:1234/v1"
-            />
-          </div>
+        <div id="ai-endpoint-container" class="setting-item" style="display: none">
+          <label class="setting-label" id="ai-endpoint-label">Endpoint URL</label>
+          <input type="text" class="setting-control" id="ai-endpoint-input" placeholder="http://localhost:1234/v1" />
+        </div>
 
-          <div class="modal-buttons">
-            <button class="modal-btn secondary" onclick="closeAISettings()">
-              <span id="ai-cancel-btn">Cancel</span>
-            </button>
-            <button class="modal-btn primary" onclick="saveAISettings()">
-              <span id="ai-save-btn">Save Settings</span>
-            </button>
-          </div>
+        <div class="modal-buttons">
+          <button class="modal-btn secondary" onclick="closeAISettings()">
+            <span id="ai-cancel-btn">Cancel</span>
+          </button>
+          <button class="modal-btn primary" onclick="saveAISettings()">
+            <span id="ai-save-btn">Save Settings</span>
+          </button>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- Fix for Electron module/exports/process conflict with UMD loaders -->
-    <!-- Fix for Electron module/exports/process conflict with UMD loaders -->
-    <script>
-      // Save references
-      window._saved_module = window.module;
-      window._saved_exports = window.exports;
-      window._saved_process = window.process;
-      window._saved_global = window.global;
+  <!-- Fix for Electron module/exports/process conflict with UMD loaders -->
+  <!-- Fix for Electron module/exports/process conflict with UMD loaders -->
+  <script>
+    // Save references
+    window._saved_module = window.module;
+    window._saved_exports = window.exports;
+    window._saved_process = window.process;
+    window._saved_global = window.global;
 
-      // Shadow globals with undefined
-      window.module = undefined;
-      window.exports = undefined;
-      window.process = undefined;
-      window.global = undefined;
-    </script>
-    <script src="https://js.puter.com/v2/"></script>
-    <script>
-      // Restore globals by deleting the shadowing properties
-      // This reveals the original properties from the prototype chain or global scope
-      if (window._saved_module !== undefined)
-        window.module = window._saved_module;
-      else delete window.module;
-      if (window._saved_exports !== undefined)
-        window.exports = window._saved_exports;
-      else delete window.exports;
-      if (window._saved_process !== undefined)
-        window.process = window._saved_process;
-      else delete window.process;
-      if (window._saved_global !== undefined)
-        window.global = window._saved_global;
-      else delete window.global;
+    // Shadow globals with undefined
+    window.module = undefined;
+    window.exports = undefined;
+    window.process = undefined;
+    window.global = undefined;
+  </script>
+  <script src="https://js.puter.com/v2/"></script>
+  <script>
+    // Restore globals by deleting the shadowing properties
+    // This reveals the original properties from the prototype chain or global scope
+    if (window._saved_module !== undefined)
+      window.module = window._saved_module;
+    else delete window.module;
+    if (window._saved_exports !== undefined)
+      window.exports = window._saved_exports;
+    else delete window.exports;
+    if (window._saved_process !== undefined)
+      window.process = window._saved_process;
+    else delete window.process;
+    if (window._saved_global !== undefined)
+      window.global = window._saved_global;
+    else delete window.global;
 
-      // Cleanup temp refs
-      delete window._saved_module;
-      delete window._saved_exports;
-      delete window._saved_process;
-      delete window._saved_global;
-    </script>
+    // Cleanup temp refs
+    delete window._saved_module;
+    delete window._saved_exports;
+    delete window._saved_process;
+    delete window._saved_global;
+  </script>
 
-    <!-- Scripts -->
-    <script src="src/ai.js"></script>
-    <script src="src/terminal.js"></script>
-    <script src="src/contextmenu.js"></script>
-    <script src="src/renderer.js"></script>
-  </body>
+  <!-- Scripts -->
+  <script src="src/ai.js"></script>
+  <script src="src/terminal.js"></script>
+  <script src="src/contextmenu.js"></script>
+  <script src="src/renderer.js"></script>
+  <script src="src/extensions.js"></script>
+
+  <!-- Resizers and UI fixes -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Global state for tracking resize operations
+      let activeResizeOperation = null;
+
+      // GLOBAL FIX: Reset all resize states on ANY mouseup
+      // This ensures inputs never get stuck in non-selectable state
+      function resetAllResizeStates() {
+        activeResizeOperation = null;
+        document.body.classList.remove('resizing');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        document.body.style.webkitUserSelect = '';
+
+        // Remove all resizing classes
+        document.querySelectorAll('.resizing').forEach(el => {
+          el.classList.remove('resizing');
+        });
+
+        // Force enable all inputs
+        document.querySelectorAll('input, textarea, select').forEach(el => {
+          el.style.pointerEvents = '';
+          el.style.userSelect = '';
+        });
+
+        if (window.editor && typeof window.editor.layout === 'function') {
+          setTimeout(() => window.editor.layout(), 10);
+        }
+      }
+
+      // Multiple event listeners for mouseup to catch all cases
+      document.addEventListener('mouseup', resetAllResizeStates);
+      window.addEventListener('mouseup', resetAllResizeStates);
+      document.addEventListener('mouseleave', resetAllResizeStates);
+
+      // Also reset on blur (when window loses focus)
+      window.addEventListener('blur', resetAllResizeStates);
+
+      // Terminal Resizer
+      const terminalResizer = document.getElementById('terminal-resizer');
+      const terminalContainer = document.getElementById('terminal-container');
+
+      if (terminalResizer && terminalContainer) {
+        let startY, startHeight;
+
+        terminalResizer.addEventListener('mousedown', (e) => {
+          activeResizeOperation = 'terminal';
+          startY = e.clientY;
+          startHeight = terminalContainer.offsetHeight;
+          terminalResizer.classList.add('resizing');
+          document.body.classList.add('resizing');
+          document.body.style.cursor = 'ns-resize';
+          document.body.style.userSelect = 'none';
+          e.preventDefault();
+          e.stopPropagation();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+          if (activeResizeOperation !== 'terminal') return;
+          const delta = startY - e.clientY;
+          const newHeight = Math.max(100, Math.min(600, startHeight + delta));
+          terminalContainer.style.height = newHeight + 'px';
+          if (window.editor && typeof window.editor.layout === 'function') window.editor.layout();
+        });
+      }
+
+      // AI Panel Resizer
+      const aiResizer = document.getElementById('ai-resizer');
+      const aiPanel = document.getElementById('ai-panel');
+      const mainContent = document.querySelector('.main-content');
+
+      if (aiResizer && aiPanel) {
+        let startX, startWidth;
+
+        aiResizer.addEventListener('mousedown', (e) => {
+          activeResizeOperation = 'ai';
+          startX = e.clientX;
+          startWidth = aiPanel.offsetWidth;
+          aiResizer.classList.add('resizing');
+          document.body.classList.add('resizing');
+          document.body.style.cursor = 'ew-resize';
+          document.body.style.userSelect = 'none';
+          e.preventDefault();
+          e.stopPropagation();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+          if (activeResizeOperation !== 'ai') return;
+          const delta = startX - e.clientX;
+          const newWidth = Math.max(300, Math.min(800, startWidth + delta));
+          aiPanel.style.width = newWidth + 'px';
+          if (mainContent && mainContent.classList.contains('ai-open')) {
+            const editorContainer = document.querySelector('.editor-container');
+            if (editorContainer) editorContainer.style.marginRight = newWidth + 'px';
+          }
+          if (window.editor && typeof window.editor.layout === 'function') window.editor.layout();
+        });
+      }
+
+      // Fix ALL inputs - prevent drag from interfering
+      document.querySelectorAll('input, textarea').forEach(input => {
+        input.addEventListener('mousedown', (e) => {
+          // Reset resize state if active when clicking on input
+          if (activeResizeOperation) {
+            resetAllResizeStates();
+          }
+        });
+
+        input.addEventListener('focus', () => {
+          // Ensure input is enabled when focused
+          resetAllResizeStates();
+        });
+      });
+
+      // Fix AI input specific issues
+      const aiInput = document.getElementById('ai-input');
+      if (aiInput) {
+        aiInput.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+          resetAllResizeStates();
+        });
+
+        aiInput.addEventListener('input', () => {
+          aiInput.style.height = 'auto';
+          aiInput.style.height = Math.min(aiInput.scrollHeight, 120) + 'px';
+        });
+
+        aiInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (window.sendAIMessage) window.sendAIMessage();
+          }
+        });
+      }
+
+      // Fix modal input focus
+      const inputModalInput = document.getElementById('input-modal-input');
+      if (inputModalInput) {
+        inputModalInput.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+          resetAllResizeStates();
+        });
+
+        inputModalInput.addEventListener('focus', () => {
+          resetAllResizeStates();
+        });
+      }
+
+      // Initialize Extension Manager
+      if (typeof ExtensionManager !== 'undefined') {
+        window.extensionManager = new ExtensionManager();
+        window.extensionManager.loadAllExtensions().then(() => {
+          console.log('Extensions loaded');
+        });
+      }
+
+      // Expose global reset function
+      window.resetResizeStates = resetAllResizeStates;
+    });
+  </script>
+</body>
+
 </html>

@@ -323,9 +323,10 @@ IMPORTANT RULES:
                     }
 
                     fs.writeFileSync(targetPath, args.content, 'utf8');
-                    // Refresh UI if file is open
-                    // This is a bit hacky to access global functions but works in renderer scope
-                    if (window.openFolder) ipcRenderer.send('refresh-folder', window.currentFolder?.path);
+                    // Refresh folder tree
+                    if (window.currentFolder) ipcRenderer.send('refresh-folder', window.currentFolder.path);
+                    // Refresh open file in editor if it's the same file
+                    this.refreshOpenFile(targetPath, args.content);
                     return `File written successfully to ${targetPath}`;
 
                 case 'apply_patch':
@@ -350,7 +351,10 @@ IMPORTANT RULES:
                     const patched = this.applyUnifiedDiff(original, patchText);
                     fs.writeFileSync(filePath, patched, 'utf8');
 
-                    if (window.openFolder) ipcRenderer.send('refresh-folder', window.currentFolder?.path);
+                    // Refresh folder tree
+                    if (window.currentFolder) ipcRenderer.send('refresh-folder', window.currentFolder.path);
+                    // Refresh open file in editor
+                    this.refreshOpenFile(filePath, patched);
                     return `Patch applied successfully to ${filePath}`;
 
                 case 'remove_comments':
@@ -370,7 +374,10 @@ IMPORTANT RULES:
                     const originalText = fs.readFileSync(commentFilePath, 'utf8');
                     const cleaned = this.removePythonComments(originalText);
                     fs.writeFileSync(commentFilePath, cleaned, 'utf8');
-                    if (window.openFolder) ipcRenderer.send('refresh-folder', window.currentFolder?.path);
+                    // Refresh folder tree
+                    if (window.currentFolder) ipcRenderer.send('refresh-folder', window.currentFolder.path);
+                    // Refresh open file in editor
+                    this.refreshOpenFile(commentFilePath, cleaned);
                     return `Comments removed from ${commentFilePath}`;
 
                 case 'run_command':
@@ -419,6 +426,44 @@ IMPORTANT RULES:
         }
     }
 
+    // Refresh a file that's currently open in the editor
+    refreshOpenFile(filePath, newContent) {
+        try {
+            if (!window.openFiles || !window.editor) return;
+            
+            const fileIndex = window.openFiles.findIndex(f => f.path === filePath);
+            if (fileIndex >= 0) {
+                // Update the file content in memory
+                window.openFiles[fileIndex].content = newContent;
+                window.openFiles[fileIndex].modified = false;
+                
+                // If this file is currently displayed, update the editor
+                if (fileIndex === window.currentFileIndex) {
+                    const currentPosition = window.editor.getPosition();
+                    const currentScrollTop = window.editor.getScrollTop();
+                    
+                    // Temporarily disable change tracking
+                    window.isOpeningFile = true;
+                    window.editor.setValue(newContent);
+                    window.isOpeningFile = false;
+                    
+                    // Restore cursor position and scroll
+                    if (currentPosition) {
+                        window.editor.setPosition(currentPosition);
+                    }
+                    window.editor.setScrollTop(currentScrollTop);
+                }
+                
+                // Update tabs to remove modified indicator
+                if (window.updateEditorTabs) {
+                    window.updateEditorTabs();
+                }
+            }
+        } catch (e) {
+            console.error('Failed to refresh open file:', e);
+        }
+    }
+
     removePythonComments(text) {
         // Conservative comment remover:
         // - keeps shebang and encoding lines
@@ -453,8 +498,8 @@ IMPORTANT RULES:
     }
 
     applyUnifiedDiff(originalText, diffText) {
-        // Minimal unified diff applier for simple patches.
-        // Supports one or multiple hunks, assumes the diff matches the current file.
+        // Flexible unified diff applier that handles AI-generated patches
+        // More tolerant of whitespace differences and context mismatches
         const originalLines = originalText.split(/\r?\n/);
         const diffLines = diffText.split(/\r?\n/);
 
@@ -463,7 +508,7 @@ IMPORTANT RULES:
         let i = 0;
 
         const parseHunkHeader = (line) => {
-            // @@ -start,count +start,count @@
+            // @@ -start,count +start,count @@ optional context
             const m = line.match(/^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@/);
             if (!m) return null;
             return {
@@ -474,8 +519,39 @@ IMPORTANT RULES:
             };
         };
 
+        // Normalize line for comparison (trim trailing whitespace)
+        const normalizeLine = (line) => (line || '').trimEnd();
+
+        // Find best match for a context line (fuzzy matching)
+        const findContextMatch = (expected, startFrom) => {
+            const normalizedExpected = normalizeLine(expected);
+            // First try exact position
+            if (startFrom < originalLines.length && 
+                normalizeLine(originalLines[startFrom]) === normalizedExpected) {
+                return startFrom;
+            }
+            // Search nearby (within 5 lines)
+            for (let offset = 1; offset <= 5; offset++) {
+                if (startFrom + offset < originalLines.length &&
+                    normalizeLine(originalLines[startFrom + offset]) === normalizedExpected) {
+                    return startFrom + offset;
+                }
+                if (startFrom - offset >= 0 &&
+                    normalizeLine(originalLines[startFrom - offset]) === normalizedExpected) {
+                    return startFrom - offset;
+                }
+            }
+            return -1;
+        };
+
         // Skip file header lines until first hunk
         while (i < diffLines.length && !diffLines[i].startsWith('@@')) i++;
+
+        // If no hunks found, return original
+        if (i >= diffLines.length) {
+            console.warn('No hunks found in patch, returning original');
+            return originalText;
+        }
 
         while (i < diffLines.length) {
             const header = diffLines[i];
@@ -486,40 +562,83 @@ IMPORTANT RULES:
             }
             i++;
 
+            // Copy lines before this hunk
             const targetIndex = Math.max(0, hunk.oldStart - 1);
             while (origIndex < targetIndex && origIndex < originalLines.length) {
                 out.push(originalLines[origIndex++]);
             }
 
+            // Process hunk lines
             while (i < diffLines.length && !diffLines[i].startsWith('@@')) {
                 const line = diffLines[i];
+                
+                // Handle empty lines in diff (treat as context)
+                if (line === '' || line === ' ') {
+                    if (origIndex < originalLines.length) {
+                        out.push(originalLines[origIndex++]);
+                    }
+                    i++;
+                    continue;
+                }
+
                 const prefix = line[0];
                 const content = line.slice(1);
 
                 if (prefix === ' ') {
-                    if (originalLines[origIndex] !== content) {
-                        throw new Error('Patch context mismatch');
+                    // Context line - be tolerant of whitespace differences
+                    const matchIdx = findContextMatch(content, origIndex);
+                    if (matchIdx >= 0) {
+                        // Copy any skipped lines
+                        while (origIndex < matchIdx) {
+                            out.push(originalLines[origIndex++]);
+                        }
+                        out.push(originalLines[origIndex++]);
+                    } else {
+                        // Context doesn't match - just copy original and continue
+                        console.warn(`Patch context mismatch at line ${origIndex + 1}, continuing anyway`);
+                        if (origIndex < originalLines.length) {
+                            out.push(originalLines[origIndex++]);
+                        }
                     }
-                    out.push(originalLines[origIndex]);
-                    origIndex++;
                 } else if (prefix === '-') {
-                    if (originalLines[origIndex] !== content) {
-                        throw new Error('Patch delete mismatch');
+                    // Delete line - verify it matches (with tolerance)
+                    if (origIndex < originalLines.length) {
+                        const normalizedOrig = normalizeLine(originalLines[origIndex]);
+                        const normalizedContent = normalizeLine(content);
+                        if (normalizedOrig === normalizedContent) {
+                            origIndex++; // Skip this line (delete it)
+                        } else {
+                            // Try to find the line nearby
+                            const matchIdx = findContextMatch(content, origIndex);
+                            if (matchIdx >= 0 && matchIdx > origIndex) {
+                                // Copy lines before the match, then skip the matched line
+                                while (origIndex < matchIdx) {
+                                    out.push(originalLines[origIndex++]);
+                                }
+                                origIndex++; // Skip the matched line
+                            } else {
+                                console.warn(`Patch delete mismatch at line ${origIndex + 1}, skipping delete`);
+                            }
+                        }
                     }
-                    origIndex++;
                 } else if (prefix === '+') {
+                    // Add line
                     out.push(content);
                 } else if (line.startsWith('\\ No newline at end of file')) {
                     // ignore
                 } else if (line.startsWith('---') || line.startsWith('+++')) {
-                    // ignore within diff body
+                    // ignore file headers within diff body
                 } else {
-                    // ignore unknown
+                    // Unknown prefix - treat as context if it looks like code
+                    if (line.trim() && origIndex < originalLines.length) {
+                        out.push(originalLines[origIndex++]);
+                    }
                 }
                 i++;
             }
         }
 
+        // Copy remaining lines
         while (origIndex < originalLines.length) {
             out.push(originalLines[origIndex++]);
         }

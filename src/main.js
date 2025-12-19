@@ -566,3 +566,19 @@ ipcMain.on('execute-terminal-command', (event, { command, cwd }) => {
     });
   });
 });
+
+// Extension installation dialog
+ipcMain.on('open-extension-dialog', (event) => {
+  dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile'],
+    filters: [
+      { name: 'ByteCode Extension', extensions: ['bcext'] },
+      { name: 'ZIP Archive', extensions: ['zip'] }
+    ],
+    title: 'Install Extension'
+  }).then(result => {
+    if (!result.canceled && result.filePaths.length > 0) {
+      event.reply('extension-file-selected', result.filePaths[0]);
+    }
+  });
+});

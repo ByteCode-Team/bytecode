@@ -47,6 +47,7 @@
   "license": "MIT",
   "dependencies": {
     "@electron/remote": "^2.1.2",
+    "adm-zip": "^0.5.16",
     "axios": "^1.6.0",
     "marked": "^11.0.0",
     "monaco-editor": "^0.44.0",

@@ -121,8 +121,15 @@ ipcRenderer.on('settings-loaded', (event, loadedSettings) => {
 
         // Open last opened folder if exists
         if (settings.lastOpenedFolder) {
-            console.log('Restoring last opened folder:', settings.lastOpenedFolder);
-            ipcRenderer.send('load-folder-contents', settings.lastOpenedFolder);
+            // Check existence before attempting to load (sometimes the folder may not exist)
+            const fs = require('fs');
+            if (fs.existsSync(settings.lastOpenedFolder)) {
+                console.log('Restoring last opened folder:', settings.lastOpenedFolder);
+                ipcRenderer.send('load-folder-contents', settings.lastOpenedFolder);
+            } else {
+                console.warn('Last opened folder does not exist:', settings.lastOpenedFolder);
+                settings.lastOpenedFolder = null;
+            }
         }
     }
 });
@@ -212,6 +219,14 @@ amdRequire(['vs/editor/editor.main'], function () {
             openFiles[currentFileIndex].modified = true;
             openFiles[currentFileIndex].content = editor.getValue();
             updateEditorTabs();
+
+            // Trigger extension hook
+            if (window.extensionManager) {
+                window.extensionManager.trigger('editor:change', {
+                    file: openFiles[currentFileIndex],
+                    content: editor.getValue()
+                });
+            }
         }
     });
 
@@ -543,6 +558,11 @@ function switchToFile(index) {
     updateStatusBar();
     updateEditorTabs();
     updateTreeSelection();
+
+    // Trigger extension hook
+    if (window.extensionManager) {
+        window.extensionManager.trigger('file:open', { file, index });
+    }
 }
 
 function closeFile(index) {
@@ -808,6 +828,9 @@ ipcRenderer.on('folder-opened', (event, data) => {
     container.innerHTML = `<div class="folder-name">${safeName}</div>`;
 
     renderFolderTree(data.structure, container, 0);
+
+    // Save settings to persist the last opened folder
+    saveSettings();
 });
 
 ipcRenderer.on('folder-refreshed', (event, { path: folderPath, structure }) => {
@@ -868,6 +891,9 @@ ipcRenderer.on('folder-contents-loaded', (event, data) => {
         const container = document.getElementById('folder-tree');
         container.innerHTML = `<div class="folder-name">${safeName}</div>`;
         renderFolderTree(structure, container, 0);
+
+        // Save settings to persist the last opened folder
+        saveSettings();
     }
 });
 
@@ -903,6 +929,11 @@ ipcRenderer.on('save-file-result', (event, result) => {
         }
         updateEditorTabs();
         updateTitleBar();
+
+        // Trigger extension hook
+        if (window.extensionManager) {
+            window.extensionManager.trigger('file:save', { file, path: result.path });
+        }
     }
 });
 
@@ -1203,6 +1234,73 @@ window.openFiles = openFiles;
 window.updateEditorTabs = updateEditorTabs;
 window.updateTitleBar = updateTitleBar;
 window.renderFolderTree = renderFolderTree;
+window.isOpeningFile = false; // For AI file refresh
+
+// Extension management functions
+function openExtensionsPanel() {
+    if (!window.extensionManager) {
+        alert('Extension manager not initialized');
+        return;
+    }
+
+    const extensions = window.extensionManager.getExtensions();
+    let html = '<h3 style="margin-bottom:15px;">Installed Extensions</h3>';
+
+    if (extensions.length === 0) {
+        html += '<p style="color:#858585;">No extensions installed.</p>';
+        html += '<p style="color:#858585;margin-top:10px;">Place extension folders in the extensions directory or install .bcext files.</p>';
+    } else {
+        html += '<div style="max-height:300px;overflow-y:auto;">';
+        extensions.forEach(ext => {
+            html += `
+                <div style="padding:10px;background:#2d2d30;border-radius:6px;margin-bottom:8px;">
+                    <div style="font-weight:600;color:#fff;">${ext.name} <span style="color:#858585;font-weight:normal;">v${ext.version}</span></div>
+                    <div style="font-size:12px;color:#858585;margin-top:4px;">${ext.description || 'No description'}</div>
+                    <div style="font-size:11px;color:#667eea;margin-top:4px;">by ${ext.author}</div>
+                    <button onclick="window.extensionManager.uninstallExtension('${ext.id}')" style="margin-top:8px;padding:4px 8px;background:#f44336;color:white;border:none;border-radius:4px;cursor:pointer;font-size:11px;">Uninstall</button>
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="modal-content" style="width:450px;">
+            <div class="modal-header">
+                <div class="modal-title">Extensions</div>
+                <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+            </div>
+            <div class="modal-body">${html}</div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function installExtensionDialog() {
+    ipcRenderer.send('open-extension-dialog');
+}
+
+function openExtensionsFolder() {
+    if (window.extensionManager) {
+        const { shell } = require('electron');
+        shell.openPath(window.extensionManager.extensionsPath);
+    }
+}
+
+// Handle extension file selection
+ipcRenderer.on('extension-file-selected', async (event, filePath) => {
+    if (window.extensionManager && filePath) {
+        await window.extensionManager.installExtension(filePath);
+    }
+});
+
+window.openExtensionsPanel = openExtensionsPanel;
+window.installExtensionDialog = installExtensionDialog;
+window.openExtensionsFolder = openExtensionsFolder;
 
 // Initialize AI Manager
 async function initializeAI() {
@@ -1210,6 +1308,7 @@ async function initializeAI() {
         // Enable @electron/remote for AI Manager
         const remote = require('@electron/remote');
         aiManager = new AIManager();
+        window.aiManager = aiManager; // Expose globally for extensions
         console.log('AI Manager initialized successfully');
 
         // AI Manager is ready - no pre-loading needed for Groq
@@ -1224,12 +1323,25 @@ async function initializeAI() {
 // AI Panel Functions
 function toggleAIPanel() {
     const panel = document.getElementById('ai-panel');
+    const mainContent = document.querySelector('.main-content');
     isAIPanelOpen = !isAIPanelOpen;
 
     if (isAIPanelOpen) {
         panel.classList.add('open');
+        if (mainContent) mainContent.classList.add('ai-open');
+        // Focus the input
+        setTimeout(() => {
+            const input = document.getElementById('ai-input');
+            if (input) input.focus();
+        }, 300);
     } else {
         panel.classList.remove('open');
+        if (mainContent) mainContent.classList.remove('ai-open');
+    }
+
+    // Relayout Monaco editor
+    if (editor) {
+        setTimeout(() => editor.layout(), 310);
     }
 }
 

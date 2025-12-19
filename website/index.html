@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ByteCode IDE - Modern Code Editor with AI</title>
+    <meta name="description"
+        content="ByteCode is a modern, powerful code editor with built-in AI assistant. Free, open-source, and extensible.">
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="nav-logo">
+                <img src="assets/iconname.png" alt="ByteCode">
+                <span>ByteCode</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#ai">AI Assistant</a>
+                <a href="docs.html">Documentation</a>
+                <a href="#download" class="nav-btn">Download</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <div class="hero-badge">✨ Version 0.0.1 Released</div>
+            <h1>Code Smarter,<br><span class="gradient-text">Not Harder</span></h1>
+            <p class="hero-subtitle">ByteCode is a modern, code editor that helps you write better code faster. Free,
+                open-source, and built for developers.</p>
+            <div class="hero-buttons">
+                <a href="#download" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                    </svg>
+                    Download for Windows
+                </a>
+                <a href="https://github.com/ByteCode-Team/bytecode" class="btn btn-secondary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.605-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z" />
+                    </svg>
+                    View on GitHub
+                </a>
+            </div>
+        </div>
+        <div class="hero-image">
+            <img src="screenshot.png" alt="ByteCode IDE Screenshot">
+        </div>
+    </header>
+
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Everything you need to code</h2>
+                <p>Powerful features designed for modern development workflows</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>AI-Powered Assistant</h3>
+                    <p>Get intelligent code suggestions, explanations, and refactoring help from multiple AI providers
+                        including Claude, GPT-4, and local models.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Lightning Fast</h3>
+                    <p>Built on Monaco Editor (the same engine as VS Code), ByteCode delivers a smooth, responsive
+                        editing experience.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Beautiful Interface</h3>
+                    <p>A clean, modern dark theme with syntax highlighting for 50+ languages. Easy on the eyes, day or
+                        night.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔌</div>
+                    <h3>Extensible</h3>
+                    <p>Create and install extensions with our simple .bcext format. Customize ByteCode to fit your
+                        workflow.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💻</div>
+                    <h3>Integrated Terminal</h3>
+                    <p>Run commands, scripts, and manage your project without leaving the editor. Full terminal
+                        emulation built-in.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h3>Multi-Language</h3>
+                    <p>Available in English and French, with more languages coming soon. Contribute translations on
+                        GitHub!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="ai-section" id="ai">
+        <div class="container">
+            <div class="ai-content">
+                <div class="ai-text">
+                    <h2>AI that understands your code</h2>
+                    <p>ByteCode's AI assistant can read, write, and modify your files. Ask it to explain code, fix bugs,
+                        add comments, or even create new features.</p>
+                    <ul class="ai-features">
+                        <li>✓ Multiple AI providers (Claude, GPT-4, Gemini, Groq, Ollama)</li>
+                        <li>✓ Free tier with Puter.js - no API key needed</li>
+                        <li>✓ Local AI support with Ollama and LM Studio</li>
+                        <li>✓ Agent mode - AI can edit files directly</li>
+                        <li>✓ Context-aware suggestions</li>
+                    </ul>
+                </div>
+                <div class="ai-demo">
+                    <div class="chat-window">
+                        <div class="chat-header">
+                            <span>🤖 AI Assistant</span>
+                        </div>
+                        <div class="chat-messages">
+                            <div class="message user">Add error handling to this function</div>
+                            <div class="message ai">I'll add try-catch blocks and proper error messages to your
+                                function...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="download" id="download">
+        <div class="container">
+            <div class="download-content">
+                <h2>Ready to code?</h2>
+                <p>Download ByteCode for free and start coding smarter today.</p>
+                <div class="download-buttons">
+                    <button class="btn btn-primary btn-large" onclick="showDownloadModal()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                        </svg>
+                        Download for Windows
+                    </button>
+                </div>
+                <p class="download-info">Windows 10/11 • 64-bit • ~150MB</p>
+                <div class="download-links">
+                    <a href="https://github.com/ByteCode-Team/bytecode">Source Code</a>
+                    <span>•</span>
+                    <a href="docs.html">Documentation</a>
+                    <span>•</span>
+                    <a href="https://github.com/ByteCode-Team/bytecode/issues">Report Bug</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Modal -->
+    <div id="download-modal" class="download-modal">
+        <div class="download-modal-content">
+            <button class="modal-close-btn" onclick="closeDownloadModal()">×</button>
+            <h3>Choose download source</h3>
+            <p>Select how you want to download ByteCode</p>
+            <div class="download-options">
+                <a href="ByteCode-Setup.exe" class="download-option" download>
+                    <div class="download-option-icon">🌐</div>
+                    <div class="download-option-text">
+                        <span class="download-option-title">Direct Download</span>
+                        <span class="download-option-desc">Download from our website (faster)</span>
+                    </div>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                    </svg>
+                </a>
+                <a href="https://github.com/ByteCode-Team/bytecode/releases" class="download-option" target="_blank">
+                    <div class="download-option-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.335-1.755-1.335-1.755-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.605-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z" />
+                        </svg>
+                    </div>
+                    <div class="download-option-text">
+                        <span class="download-option-title">GitHub Releases</span>
+                        <span class="download-option-desc">View all versions and changelogs</span>
+                    </div>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="assets/iconname.png" alt="ByteCode">
+                    <p>A modern IDE for modern developers.<br>Built with ❤️ by the ByteCode Team.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-col">
+                        <h4>Product</h4>
+                        <a href="#features">Features</a>
+                        <a href="#download">Download</a>
+                        <a href="docs.html">Documentation</a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Resources</h4>
+                        <a href="docs.html#extensions">Extensions</a>
+                        <a href="docs.html#api">API Reference</a>
+                        <a href="docs.html#ai">AI Setup</a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Community</h4>
+                        <a href="https://github.com/ByteCode-Team/bytecode">GitHub</a>
+                        <a href="https://github.com/ByteCode-Team/bytecode/issues">Issues</a>
+                        <a href="https://github.com/ByteCode-Team/bytecode/discussions">Discussions</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2024-2025 ByteCode Team. Open source under MIT License.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

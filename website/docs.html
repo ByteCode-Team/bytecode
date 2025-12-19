@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation - ByteCode IDE</title>
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="docs.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">
+                <img src="../logoname.png" alt="ByteCode">
+                <span>ByteCode</span>
+            </a>
+            <div class="nav-links">
+                <a href="index.html#features">Features</a>
+                <a href="index.html#ai">AI Assistant</a>
+                <a href="docs.html">Documentation</a>
+                <a href="index.html#download" class="nav-btn">Download</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <div class="docs-nav">
+                <h3>Getting Started</h3>
+                <a href="#installation">Installation</a>
+                <a href="#interface">Interface Overview</a>
+                <a href="#shortcuts">Keyboard Shortcuts</a>
+                
+                <h3>AI Assistant</h3>
+                <a href="#ai-setup">Setup</a>
+                <a href="#ai-providers">Providers</a>
+                <a href="#ai-usage">Usage</a>
+                <a href="#ai-agent">Agent Mode</a>
+                
+                <h3>Extensions</h3>
+                <a href="#ext-install">Installing</a>
+                <a href="#ext-create">Creating</a>
+                <a href="#ext-api">API Reference</a>
+                
+                <h3>Advanced</h3>
+                <a href="#terminal">Terminal</a>
+                <a href="#settings">Settings</a>
+            </div>
+        </aside>
+
+        <main class="docs-content">
+            <h1>ByteCode Documentation</h1>
+            <p class="docs-intro">Welcome to ByteCode! This guide will help you get started and make the most of your new IDE.</p>
+
+            <section id="installation">
+                <h2>Installation</h2>
+                <p>ByteCode is available for Windows. Download the latest release from our GitHub page.</p>
+                <div class="docs-steps">
+                    <div class="step">
+                        <span class="step-num">1</span>
+                        <div>
+                            <h4>Download</h4>
+                            <p>Get the latest <code>.exe</code> installer from the releases page.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">2</span>
+                        <div>
+                            <h4>Install</h4>
+                            <p>Run the installer and follow the prompts.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">3</span>
+                        <div>
+                            <h4>Launch</h4>
+                            <p>Open ByteCode from your Start menu or desktop shortcut.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="interface">
+                <h2>Interface Overview</h2>
+                <p>ByteCode's interface is designed to be familiar and intuitive:</p>
+                <ul>
+                    <li><strong>Title Bar</strong> - Contains the menu, window controls, and current file path</li>
+                    <li><strong>Sidebar</strong> - File explorer for navigating your project</li>
+                    <li><strong>Editor</strong> - Main code editing area with syntax highlighting</li>
+                    <li><strong>Terminal</strong> - Integrated terminal (toggle with Ctrl+`)</li>
+                    <li><strong>Status Bar</strong> - Shows cursor position, language, and encoding</li>
+                    <li><strong>AI Panel</strong> - Chat with the AI assistant (click the button in bottom-right)</li>
+                </ul>
+            </section>
+
+            <section id="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+                <div class="shortcuts-table">
+                    <div class="shortcut-row">
+                        <span class="keys">Ctrl + N</span>
+                        <span>New File</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="keys">Ctrl + O</span>
+                        <span>Open File</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="keys">Ctrl + Shift + O</span>
+                        <span>Open Folder</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="keys">Ctrl + S</span>
+                        <span>Save</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="keys">Ctrl + `</span>
+                        <span>Toggle Terminal</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="keys">Ctrl + F</span>
+                        <span>Find</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="keys">Ctrl + H</span>
+                        <span>Find & Replace</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="keys">F11</span>
+                        <span>Toggle Fullscreen</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="ai-setup">
+                <h2>AI Setup</h2>
+                <p>ByteCode supports multiple AI providers. Here's how to set them up:</p>
+                
+                <h3>Free Options (No API Key)</h3>
+                <ul>
+                    <li><strong>Puter.js</strong> - Default provider, works out of the box but has rate limits</li>
+                    <li><strong>Ollama</strong> - Run AI models locally on your machine</li>
+                    <li><strong>LM Studio</strong> - Another local AI option</li>
+                </ul>
+
+                <h3>API Key Required</h3>
+                <ul>
+                    <li><strong>Groq</strong> - Free tier available at <a href="https://console.groq.com">console.groq.com</a></li>
+                    <li><strong>Claude</strong> - Anthropic's AI at <a href="https://console.anthropic.com">console.anthropic.com</a></li>
+                    <li><strong>OpenAI</strong> - GPT models at <a href="https://platform.openai.com">platform.openai.com</a></li>
+                    <li><strong>Google Gemini</strong> - At <a href="https://makersuite.google.com">makersuite.google.com</a></li>
+                </ul>
+
+                <div class="docs-note">
+                    <strong>💡 Tip:</strong> Groq offers a generous free tier and is very fast. It's a great option if you want better performance than Puter.js without paying.
+                </div>
+            </section>
+
+            <section id="ai-providers">
+                <h2>AI Providers</h2>
+                <p>To configure your AI provider:</p>
+                <ol>
+                    <li>Click the AI button (bottom-right corner)</li>
+                    <li>Click the settings icon (⚙️) in the AI panel</li>
+                    <li>Select your provider from the dropdown</li>
+                    <li>Enter your API key if required</li>
+                    <li>Choose your preferred model</li>
+                    <li>Click Save</li>
+                </ol>
+            </section>
+
+            <section id="ai-usage">
+                <h2>Using the AI</h2>
+                <p>The AI assistant can help you in several ways:</p>
+                <ul>
+                    <li><strong>Explain Code</strong> - Select code and click "Explain" to understand what it does</li>
+                    <li><strong>Fix Issues</strong> - Let the AI find and fix bugs in your code</li>
+                    <li><strong>Refactor</strong> - Improve code quality and readability</li>
+                    <li><strong>Add Comments</strong> - Automatically document your code</li>
+                    <li><strong>Chat</strong> - Ask any coding question in natural language</li>
+                </ul>
+            </section>
+
+            <section id="ai-agent">
+                <h2>Agent Mode</h2>
+                <p>ByteCode's AI can act as an agent, directly modifying your files:</p>
+                <ul>
+                    <li>Ask the AI to "create a new file called utils.js with helper functions"</li>
+                    <li>Request changes like "add error handling to this function"</li>
+                    <li>The AI will use tools to read, write, and modify files</li>
+                    <li>Changes are applied automatically and the editor refreshes</li>
+                </ul>
+                <div class="docs-warning">
+                    <strong>⚠️ Note:</strong> The AI will ask for confirmation before overwriting existing files or running potentially destructive commands.
+                </div>
+            </section>
+
+            <section id="ext-install">
+                <h2>Installing Extensions</h2>
+                <p>Extensions add new features to ByteCode. There are two ways to install them:</p>
+                
+                <h3>Method 1: From .bcext File</h3>
+                <ol>
+                    <li>Go to <strong>Extensions → Install Extension (.bcext)</strong></li>
+                    <li>Select the .bcext file</li>
+                    <li>The extension will be installed and loaded automatically</li>
+                </ol>
+
+                <h3>Method 2: Manual Installation</h3>
+                <ol>
+                    <li>Go to <strong>Extensions → Open Extensions Folder</strong></li>
+                    <li>Create a new folder for your extension</li>
+                    <li>Add <code>manifest.json</code> and <code>index.js</code></li>
+                    <li>Restart ByteCode</li>
+                </ol>
+            </section>
+
+            <section id="ext-create">
+                <h2>Creating Extensions</h2>
+                <p>Extensions are simple JavaScript files with a manifest. Here's the structure:</p>
+                
+                <h3>manifest.json</h3>
+                <pre><code>{
+    "id": "my-extension",
+    "name": "My Extension",
+    "version": "1.0.0",
+    "description": "What my extension does",
+    "author": "Your Name",
+    "main": "index.js"
+}</code></pre>
+
+                <h3>index.js</h3>
+                <pre><code>// Access the ByteCode API via the 'bytecode' object
+
+// Add a status bar item
+bytecode.ui.addStatusBarItem('my-item', '👋 Hello', () => {
+    bytecode.ui.showNotification('Hello from my extension!', 'success');
+});
+
+// Listen for events
+bytecode.hooks.on('file:open', (data) => {
+    console.log('File opened:', data.file.name);
+});
+
+// Use the editor
+const code = bytecode.editor.getValue();
+bytecode.editor.insertText('// Added by extension');</code></pre>
+
+                <h3>Packaging as .bcext</h3>
+                <p>A .bcext file is just a ZIP archive. To create one:</p>
+                <pre><code>cd my-extension
+zip -r ../my-extension.bcext manifest.json index.js</code></pre>
+            </section>
+
+            <section id="ext-api">
+                <h2>Extension API Reference</h2>
+                <p>Extensions have access to the <code>bytecode</code> object with these APIs:</p>
+
+                <h3>bytecode.editor</h3>
+                <pre><code>bytecode.editor.getValue()              // Get editor content
+bytecode.editor.setValue(text)          // Set editor content
+bytecode.editor.getSelection()          // Get selected text
+bytecode.editor.insertText(text)        // Insert at cursor
+bytecode.editor.getLanguage()           // Get current language
+bytecode.editor.getCursorPosition()     // {lineNumber, column}
+bytecode.editor.focus()                 // Focus the editor</code></pre>
+
+                <h3>bytecode.files</h3>
+                <pre><code>bytecode.files.getCurrentFile()         // Get current file info
+bytecode.files.getOpenFiles()           // List all open files
+bytecode.files.openFile(path)           // Open a file
+bytecode.files.saveCurrentFile()        // Save current file
+bytecode.files.readFile(path)           // Read file content
+bytecode.files.writeFile(path, content) // Write to file</code></pre>
+
+                <h3>bytecode.ui</h3>
+                <pre><code>bytecode.ui.showNotification(msg, type) // Show notification (info/success/error)
+bytecode.ui.addStatusBarItem(id, text, onClick)
+bytecode.ui.updateStatusBarItem(id, text)
+bytecode.ui.removeStatusBarItem(id)
+bytecode.ui.addMenuItem(menuId, {label, action})
+bytecode.ui.addContextMenuItem({label, action})</code></pre>
+
+                <h3>bytecode.hooks</h3>
+                <pre><code>bytecode.hooks.on(event, callback)      // Subscribe to event
+bytecode.hooks.off(event, callback)     // Unsubscribe
+
+// Available events:
+// 'editor:change', 'file:open', 'file:save', 'file:close'</code></pre>
+
+                <h3>bytecode.terminal</h3>
+                <pre><code>bytecode.terminal.execute(command)      // Run command (returns Promise)
+bytecode.terminal.show()                // Show terminal
+bytecode.terminal.write(text)           // Write to terminal</code></pre>
+
+                <h3>bytecode.ai</h3>
+                <pre><code>bytecode.ai.chat(message)               // Send message to AI (returns Promise)
+bytecode.ai.getProvider()               // Get current AI provider info</code></pre>
+
+                <h3>bytecode.storage</h3>
+                <pre><code>bytecode.storage.get(extId, key)        // Get stored value
+bytecode.storage.set(extId, key, value) // Store value
+bytecode.storage.remove(extId, key)     // Remove value</code></pre>
+            </section>
+
+            <section id="terminal">
+                <h2>Terminal</h2>
+                <p>ByteCode includes a fully-featured terminal:</p>
+                <ul>
+                    <li>Toggle with <code>Ctrl + `</code> or <strong>View → Toggle Terminal</strong></li>
+                    <li>Supports multiple terminal tabs</li>
+                    <li>Runs in your project directory</li>
+                    <li>Full command-line support</li>
+                </ul>
+            </section>
+
+            <section id="settings">
+                <h2>Settings</h2>
+                <p>Access settings via <strong>File → Settings</strong>:</p>
+                <ul>
+                    <li><strong>Auto Save</strong> - Automatically save files every 30 seconds</li>
+                    <li><strong>Enable AI</strong> - Show/hide the AI assistant button</li>
+                    <li><strong>Language</strong> - Switch between English and French</li>
+                    <li><strong>Theme</strong> - Choose your preferred color theme</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -113,16 +113,20 @@ function showInputModal(title, placeholder, callback, defaultValue = '') {
     const titleEl = document.getElementById('input-modal-title');
     const input = document.getElementById('input-modal-input');
 
-    // Reset user-select just in case it got stuck from resizing
-    document.body.style.userSelect = '';
-    document.body.style.cursor = '';
+    // Use global reset function if available, otherwise reset manually
+    if (window.resetResizeStates) {
+        window.resetResizeStates();
+    } else {
+        // Fallback: Reset user-select just in case it got stuck from resizing
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+        document.body.classList.remove('resizing');
+    }
 
-    // We can't easily access the valid local isResizing here if it's defined later,
-    // but we can query the DOM state which is the source of truth
+    // Also check sidebar resizer state
     const resizer = document.getElementById('sidebar-resizer');
     if (resizer && resizer.classList.contains('resizing')) {
         resizer.classList.remove('resizing');
-        // If we could access isResizing, we would set it to false
     }
 
     titleEl.textContent = title;
@@ -224,8 +228,11 @@ let isResizing = false;
 resizer.addEventListener('mousedown', (e) => {
     isResizing = true;
     resizer.classList.add('resizing');
+    document.body.classList.add('resizing');
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
+    e.preventDefault();
+    e.stopPropagation();
 });
 
 document.addEventListener('mousemove', (e) => {
@@ -241,11 +248,11 @@ document.addEventListener('mouseup', () => {
     if (isResizing) {
         isResizing = false;
         resizer.classList.remove('resizing');
+        document.body.classList.remove('resizing');
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
 
-        // Trigger editor layout update
-        if (window.editor) {
+        if (window.editor && typeof window.editor.layout === 'function') {
             window.editor.layout();
         }
     }
