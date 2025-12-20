@@ -82,9 +82,6 @@ function initTypingEffect() {
     const gradientText = heroTitle.querySelector('.gradient-text');
     if (gradientText) {
         gradientText.classList.add('typing-cursor');
-        setTimeout(() => {
-            gradientText.classList.remove('typing-cursor');
-        }, 3000);
     }
 }
 
