@@ -51,10 +51,38 @@
     "axios": "^1.6.0",
     "marked": "^11.0.0",
     "monaco-editor": "^0.44.0",
-    "node-pty": "^0.10.1"
+    "node-pty": "^1.0.0"
   },
   "devDependencies": {
     "electron": "^27.0.0",
     "electron-builder": "^24.6.4"
+  },
+  "build": {
+    "appId": "com.bytecode.ide",
+    "productName": "ByteCode",
+    "copyright": "Copyright © 2024-2025 ByteCode Team",
+    "directories": {
+      "output": "dist-new"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "logoname.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "logoname.ico",
+      "uninstallerIcon": "logoname.ico",
+      "installerHeaderIcon": "logoname.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ByteCode"
+    },
+    "files": [
+      "**/*",
+      "logoname.ico",
+      "!website${/*}",
+      "!dist${/*}"
+    ]
   }
 }
