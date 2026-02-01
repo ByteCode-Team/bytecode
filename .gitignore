@@ -3,3 +3,4 @@ package-lock.json
 .npmrc
 .vscode
 /dist/
+/dist-new/

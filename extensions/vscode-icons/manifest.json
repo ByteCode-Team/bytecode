@@ -1,0 +1,8 @@
+{
+    "id": "vscode-icons",
+    "name": "VSCode Icons",
+    "version": "11.0.0",
+    "description": "File icons for Visual Studio Code style.",
+    "author": "VSCode Icons Team",
+    "main": "index.js"
+}

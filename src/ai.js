@@ -105,7 +105,7 @@ class AIManager {
         this.conversationHistory = [];
     }
 
-    async chat(message, systemPrompt = null, useHistory = true) {
+    async chat(message, systemPrompt = null, useHistory = true, onToolCall = null) {
         const provider = this.config.currentProvider;
 
         if (!this.providers[provider].enabled) {
@@ -132,7 +132,6 @@ class AIManager {
                 if (provider === 'puter') {
                     // Pass explicit system prompt for Puter/Claude
                     response = await this.chatWithPuter(null, agentSystemPrompt);
-                    // Note: chatWithPuter implementation handles history from this.conversationHistory
                 } else {
                     switch (provider) {
                         case 'groq': response = await this.chatWithGroq(message, agentSystemPrompt); break;
@@ -146,23 +145,40 @@ class AIManager {
                 }
 
                 // Parse for Tool Calls
-                const toolCall = this.parseToolCall(response);
+                const detectedTools = this.parseToolCall(response);
 
-                if (toolCall) {
-                    // It's a tool call! Execute it.
-                    console.log(`[Agent] Executing tool: ${toolCall.tool}`);
-
-                    // Add AI's tool call to history
+                if (detectedTools && detectedTools.length > 0) {
+                    // Add AI's response (containing tool calls) to history
                     this.conversationHistory.push({ role: 'assistant', content: response });
 
-                    const result = await this.executeTool(toolCall.tool, toolCall.args);
-                    const toolOutput = `Tool '${toolCall.tool}' output:\n${result}`;
+                    let combinedOutput = '';
 
-                    // Feed back as user message (simulating system output)
-                    this.conversationHistory.push({ role: 'user', content: toolOutput });
+                    for (const toolCall of detectedTools) {
+                        try {
+                            console.log(`[Agent] Executing tool: ${toolCall.tool}`);
 
-                    // Loop again to let AI process the result
-                    message = toolOutput; // Update message for providers that don't rely only on history array in same way
+                            const result = await this.executeTool(toolCall.tool, toolCall.args);
+
+                            // AGENT UI FIX: Show result and wait for "Accept" if it's a UI mode (renderer)
+                            if (typeof window !== 'undefined' && window.showToolResult) {
+                                const accepted = await window.showToolResult(toolCall, result);
+                                if (!accepted) {
+                                    combinedOutput += `USER REJECTION: The user has REJECTED the changes from tool '${toolCall.tool}'. DO NOT try this exact same action again.\n\n`;
+                                    continue;
+                                }
+                            }
+
+                            combinedOutput += `SUCCESS: Tool '${toolCall.tool}' executed and user accepted the result. Output:\n${result}\n\n`;
+                        } catch (toolErr) {
+                            combinedOutput += `ERROR: Tool '${toolCall.tool}' failed: ${toolErr.message}\n\n`;
+                        }
+                    }
+
+                    // Feed back combined output as user message
+                    this.conversationHistory.push({ role: 'user', content: combinedOutput.trim() });
+
+                    // Loop again to let AI process the results - pass the output as the NEW message
+                    message = combinedOutput.trim();
                     continue;
                 } else {
                     // It's a final response
@@ -196,11 +212,10 @@ class AIManager {
         const uiLanguage = window.currentLang || 'en';
 
         return `You are ByteCode AI, an autonomous coding agent embedded in an Electron IDE.
-You can use tools to read files, list files, and run commands to help the user.
-Be careful: avoid destructive actions, avoid overwriting files unless explicitly requested, and avoid running risky commands.
+You can use tools to read, write, and list files, and run terminal commands.
 
 LANGUAGE:
-- Always respond in the user's UI language: ${uiLanguage}. If the user writes in another language, still answer in ${uiLanguage} unless asked otherwise.
+- Always respond in the user's UI language: ${uiLanguage}.
 
 Current Context:
 - Workspace: ${currentPath}
@@ -211,86 +226,124 @@ Current Context:
 - OS: Windows
 
 AVAILABLE TOOLS:
-To use a tool, you MUST reply with ONLY a JSON object in this exact format:
-{
-  "tool": "toolName",
-  "args": { "arg1": "value" }
-}
+To use a tool, you MUST reply with a JSON object wrapped in a \`\`\`json code block.
 
-Tools:
 1. read_file(path)
-   - Read content of a file. Use absolute paths or relative to workspace.
-   - Example: { "tool": "read_file", "args": { "path": "src/index.js" } }
+   - Read content of a file.
+   - Example: 
+     \`\`\`json
+     { "tool": "read_file", "args": { "path": "src/index.js" } }
+     \`\`\`
 
-2. write_file(path, content)
-   - Create a file. Overwriting is only allowed if explicitly asked.
-   - Example: { "tool": "write_file", "args": { "path": "test.js", "content": "console.log('Hi')" } }
+2. write_file(path, content, overwrite)
+   - Create or overwrite a file. Set "overwrite": true to replace existing files.
+   - Example: 
+     \`\`\`json
+     { "tool": "write_file", "args": { "path": "test.js", "content": "console.log('Hi')", "overwrite": true } }
+     \`\`\`
 
 3. apply_patch(path, patch)
-   - Apply a unified-diff patch to an existing file.
-   - Use this to modify files safely instead of rewriting full files.
-   - The patch MUST be a standard unified diff with lines starting with: "---", "+++", "@@", "+", "-", or space.
-   - Example: { "tool": "apply_patch", "args": { "path": "src/app.js", "patch": "--- a/src/app.js\n+++ b/src/app.js\n@@\n- old\n+ new\n" } }
+   - Apply a unified-diff patch to an existing file. This is PREFERRED over writing the whole file for small changes.
+   - Example: 
+     \`\`\`json
+     { "tool": "apply_patch", "args": { "path": "app.js", "patch": "--- a/app.js\\n+++ b/app.js\\n@@ -1,1 +1,1 @@\\n-old line\\n+new line" } }
+     \`\`\`
 
-4. remove_comments(path, language)
-   - Remove comments from a file and write it back.
-   - Use this instead of apply_patch when the user asks to "remove comments".
-   - Supported languages: python
-   - Example: { "tool": "remove_comments", "args": { "path": "app.py", "language": "python" } }
+4. run_command(command)
+   - Run a terminal command (npm, git, ls, tree etc.).
+   - Example: 
+     \`\`\`json
+     { "tool": "run_command", "args": { "command": "npm test" } }
+     \`\`\`
 
-5. run_command(command)
-   - Run a terminal command.
-   - Example: { "tool": "run_command", "args": { "command": "npm install" } }
-
-6. list_files(path)
+5. list_files(path)
    - List files in a directory.
-   - Example: { "tool": "list_files", "args": { "path": "." } }
+   - Example: 
+     \`\`\`json
+     { "tool": "list_files", "args": { "path": "." } }
+     \`\`\`
 
 IMPORTANT RULES:
-1. FORCE JSON: When you want to use a tool, you MUST output **ONLY** the JSON object. Do NOT add preamble like "I will create the file..." or "Here is the JSON". Just the JSON.
-   - No extra text.
-   - No markdown.
-   - No emojis.
-2. NO MARKDOWN FOR TOOLS: Do not wrap the tool JSON in markdown blocks if you can avoid it, but if you do, use \`\`\`json.
-3. If you want to speak to the user, write normal text WITHOUT any JSON tool call.
-4. Do not overwrite files unless the user explicitly requested overwriting.
-5. Do not run destructive commands (delete, format, rm -rf, del, etc.). If the user requests them, ask for confirmation and propose a safer alternative.
-6. Prefer apply_patch over write_file for editing existing files.
+1. TOOL BLOCKS: Always wrap the tool JSON in \`\`\`json tags.
+2. PREAMBLE: Explain what you are doing before the tool block. This avoids silent execution and helps different LLM providers (especially Groq).
+3. MODIFICATIONS: Prefer apply_patch for editing code. Only use write_file for new files or total rewrites. Always set "overwrite": true when you want to update an existing file.
+4. If you have the information already, do not call a tool.
 `;
     }
 
     parseToolCall(response) {
-        try {
-            const trimmed = String(response || '').trim();
+        const tools = [];
+        const trimmed = String(response || '').trim();
 
-            // STRICT MODE:
-            // Only accept a tool call if the entire response is JSON (or a single ```json``` block).
-            // This avoids executing JSON embedded inside normal text (common with local models).
+        // Helper to find valid JSON objects in text
+        const extractJsonObjects = (text) => {
+            const results = [];
+            for (let i = 0; i < text.length; i++) {
+                if (text[i] === '{') {
+                    let braceCount = 1;
+                    let inString = false;
+                    let escaped = false;
 
-            // 1) Pure JSON response
-            if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-                try {
-                    const data = JSON.parse(trimmed);
-                    if (this.isValidTool(data)) return data;
-                } catch (e) { }
-            }
+                    for (let j = i + 1; j < text.length; j++) {
+                        const char = text[j];
 
-            // 2) Entire response is exactly one JSON code block
-            const codeBlockOnly = trimmed.match(/^```json\s*([\s\S]*?)\s*```$/);
-            if (codeBlockOnly) {
-                const inner = codeBlockOnly[1].trim();
-                if (inner.startsWith('{') && inner.endsWith('}')) {
-                    try {
-                        const data = JSON.parse(inner);
-                        if (this.isValidTool(data)) return data;
-                    } catch (e) { }
+                        if (escaped) {
+                            escaped = false;
+                            continue;
+                        }
+                        if (char === '\\') {
+                            escaped = true;
+                            continue;
+                        }
+                        if (char === '"') {
+                            inString = !inString;
+                            continue;
+                        }
+                        if (!inString) {
+                            if (char === '{') braceCount++;
+                            else if (char === '}') braceCount--;
+                        }
+
+                        if (braceCount === 0) {
+                            const candidate = text.substring(i, j + 1);
+                            try {
+                                const data = JSON.parse(candidate);
+                                if (this.isValidTool(data)) {
+                                    results.push(data);
+                                    i = j; // Advance outer loop
+                                }
+                            } catch (e) { }
+                            break;
+                        }
+                    }
                 }
             }
+            return results;
+        };
 
-        } catch (e) {
-            console.warn('Tool parse check failed:', e);
+        // Attempt 1: Check for JSON code blocks
+        const codeBlockRegex = /```json\s*([\s\S]*?)\s*```/g;
+        let match;
+        while ((match = codeBlockRegex.exec(trimmed)) !== null) {
+            try {
+                const data = JSON.parse(match[1].trim());
+                if (this.isValidTool(data)) tools.push(data);
+                else {
+                    // Try recursive search in case multiple tools are in one block
+                    tools.push(...extractJsonObjects(match[1]));
+                }
+            } catch (e) {
+                // If the block isn't pure JSON, search within it
+                tools.push(...extractJsonObjects(match[1]));
+            }
         }
-        return null;
+
+        // Attempt 2: If no tools found in blocks, search entire text
+        if (tools.length === 0) {
+            tools.push(...extractJsonObjects(trimmed));
+        }
+
+        return tools.length > 0 ? tools : null;
     }
 
     isValidTool(data) {
@@ -319,7 +372,7 @@ IMPORTANT RULES:
                     const overwrite = !!args.overwrite;
 
                     if (fs.existsSync(targetPath) && !overwrite) {
-                        return `Refused to overwrite existing file: ${targetPath}. To overwrite, set args.overwrite=true or ask the user explicitly.`;
+                        return `Refused to overwrite existing file: ${targetPath}. To overwrite, set args.overwrite = true or ask the user explicitly.`;
                     }
 
                     fs.writeFileSync(targetPath, args.content, 'utf8');
@@ -327,7 +380,11 @@ IMPORTANT RULES:
                     if (window.currentFolder) ipcRenderer.send('refresh-folder', window.currentFolder.path);
                     // Refresh open file in editor if it's the same file
                     this.refreshOpenFile(targetPath, args.content);
-                    return `File written successfully to ${targetPath}`;
+                    // Auto-open if it's a new file (not already open)
+                    if (window.openFiles && !window.openFiles.find(f => f.path === targetPath)) {
+                        ipcRenderer.send('read-file', targetPath);
+                    }
+                    return `File written successfully to ${targetPath} `;
 
                 case 'apply_patch':
                     if (!args || typeof args.path !== 'string' || typeof args.patch !== 'string') {
@@ -336,7 +393,7 @@ IMPORTANT RULES:
 
                     const filePath = resolvePath(args.path);
                     if (!fs.existsSync(filePath)) {
-                        return `Tool Execution Error: File does not exist: ${filePath}`;
+                        return `Tool Execution Error: File does not exist: ${filePath} `;
                     }
 
                     // Very small safety check: ensure it looks like a unified diff
@@ -355,7 +412,7 @@ IMPORTANT RULES:
                     if (window.currentFolder) ipcRenderer.send('refresh-folder', window.currentFolder.path);
                     // Refresh open file in editor
                     this.refreshOpenFile(filePath, patched);
-                    return `Patch applied successfully to ${filePath}`;
+                    return `Patch applied successfully to ${filePath} `;
 
                 case 'remove_comments':
                     if (!args || typeof args.path !== 'string') {
@@ -363,12 +420,12 @@ IMPORTANT RULES:
                     }
                     const lang = String(args.language || '').toLowerCase();
                     if (lang !== 'python') {
-                        return `Tool Execution Error: remove_comments currently supports only language=python.`;
+                        return `Tool Execution Error: remove_comments currently supports only language = python.`;
                     }
 
                     const commentFilePath = resolvePath(args.path);
                     if (!fs.existsSync(commentFilePath)) {
-                        return `Tool Execution Error: File does not exist: ${commentFilePath}`;
+                        return `Tool Execution Error: File does not exist: ${commentFilePath} `;
                     }
 
                     const originalText = fs.readFileSync(commentFilePath, 'utf8');
@@ -378,7 +435,7 @@ IMPORTANT RULES:
                     if (window.currentFolder) ipcRenderer.send('refresh-folder', window.currentFolder.path);
                     // Refresh open file in editor
                     this.refreshOpenFile(commentFilePath, cleaned);
-                    return `Comments removed from ${commentFilePath}`;
+                    return `Comments removed from ${commentFilePath} `;
 
                 case 'run_command':
                     if (typeof args.command !== 'string' || !args.command.trim()) {
@@ -400,7 +457,7 @@ IMPORTANT RULES:
                         /^powershell\b.*\bremove-item\b/,
                     ];
                     if (destructivePatterns.some(r => r.test(lower))) {
-                        return `Refused to run potentially destructive command: ${cmd}`;
+                        return `Refused to run potentially destructive command: ${cmd} `;
                     }
 
                     return new Promise((resolve) => {
@@ -414,46 +471,65 @@ IMPORTANT RULES:
                     });
 
                 case 'list_files':
-                    const dirPath = resolvePath(args.path);
-                    const files = fs.readdirSync(dirPath);
-                    return files.join('\n');
+                    try {
+                        const dirPath = resolvePath(args.path || '.');
+                        if (!fs.existsSync(dirPath)) return `Error: Directory does not exist: ${dirPath}`;
+
+                        const stats = fs.statSync(dirPath);
+                        if (!stats.isDirectory()) return `Error: Path is not a directory: ${dirPath}`;
+
+                        const files = fs.readdirSync(dirPath);
+                        if (files.length === 0) return "(Empty directory)";
+
+                        return files.map(f => {
+                            const fPath = path.join(dirPath, f);
+                            const isDir = fs.statSync(fPath).isDirectory();
+                            return isDir ? `[DIR] ${f}` : f;
+                        }).join('\n');
+                    } catch (err) {
+                        return `Tool Execution Error (list_files): ${err.message}`;
+                    }
 
                 default:
-                    return `Unknown tool: ${name}`;
+                    return `Unknown tool: ${name} `;
             }
         } catch (err) {
-            return `Tool Execution Error: ${err.message}`;
+            return `Tool Execution Error: ${err.message} `;
         }
     }
 
     // Refresh a file that's currently open in the editor
     refreshOpenFile(filePath, newContent) {
         try {
-            if (!window.openFiles || !window.editor) return;
-            
-            const fileIndex = window.openFiles.findIndex(f => f.path === filePath);
+            if (!window.openFiles || !window.editor || !filePath) return;
+
+            // Normalize path for robust comparison
+            const norm = (p) => p ? p.replace(/[/\\]/g, '/').toLowerCase().trim() : '';
+            const targetNorm = norm(filePath);
+
+            const fileIndex = window.openFiles.findIndex(f => norm(f.path) === targetNorm);
             if (fileIndex >= 0) {
                 // Update the file content in memory
                 window.openFiles[fileIndex].content = newContent;
                 window.openFiles[fileIndex].modified = false;
-                
+
                 // If this file is currently displayed, update the editor
                 if (fileIndex === window.currentFileIndex) {
                     const currentPosition = window.editor.getPosition();
                     const currentScrollTop = window.editor.getScrollTop();
-                    
+
                     // Temporarily disable change tracking
                     window.isOpeningFile = true;
                     window.editor.setValue(newContent);
                     window.isOpeningFile = false;
-                    
+
                     // Restore cursor position and scroll
                     if (currentPosition) {
                         window.editor.setPosition(currentPosition);
                     }
                     window.editor.setScrollTop(currentScrollTop);
                 }
-                
+
                 // Update tabs to remove modified indicator
                 if (window.updateEditorTabs) {
                     window.updateEditorTabs();
@@ -526,7 +602,7 @@ IMPORTANT RULES:
         const findContextMatch = (expected, startFrom) => {
             const normalizedExpected = normalizeLine(expected);
             // First try exact position
-            if (startFrom < originalLines.length && 
+            if (startFrom < originalLines.length &&
                 normalizeLine(originalLines[startFrom]) === normalizedExpected) {
                 return startFrom;
             }
@@ -571,7 +647,7 @@ IMPORTANT RULES:
             // Process hunk lines
             while (i < diffLines.length && !diffLines[i].startsWith('@@')) {
                 const line = diffLines[i];
-                
+
                 // Handle empty lines in diff (treat as context)
                 if (line === '' || line === ' ') {
                     if (origIndex < originalLines.length) {
@@ -617,7 +693,7 @@ IMPORTANT RULES:
                                 }
                                 origIndex++; // Skip the matched line
                             } else {
-                                console.warn(`Patch delete mismatch at line ${origIndex + 1}, skipping delete`);
+                                console.warn(`Patch delete mismatch at line ${origIndex + 1}, skipping delete `);
                             }
                         }
                     }
@@ -658,7 +734,7 @@ IMPORTANT RULES:
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
+                'Authorization': `Bearer ${apiKey} `
             },
             body: JSON.stringify({
                 model: this.config.models.groq,
@@ -670,7 +746,7 @@ IMPORTANT RULES:
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(`Groq API error: ${error.error?.message || response.statusText}`);
+            throw new Error(`Groq API error: ${error.error?.message || response.statusText} `);
         }
 
         const data = await response.json();
@@ -698,7 +774,7 @@ IMPORTANT RULES:
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(`Claude API error: ${error.error?.message || response.statusText}`);
+            throw new Error(`Claude API error: ${error.error?.message || response.statusText} `);
         }
 
         const data = await response.json();
@@ -712,7 +788,7 @@ IMPORTANT RULES:
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.config.apiKeys.openai}`
+                'Authorization': `Bearer ${this.config.apiKeys.openai} `
             },
             body: JSON.stringify({
                 model: this.config.models.openai,
@@ -724,7 +800,7 @@ IMPORTANT RULES:
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(`OpenAI API error: ${error.error?.message || response.statusText}`);
+            throw new Error(`OpenAI API error: ${error.error?.message || response.statusText} `);
         }
 
         const data = await response.json();
@@ -897,11 +973,16 @@ IMPORTANT RULES:
         }
 
         // Add recent conversation history (last 10 messages)
-        messages.push(...this.conversationHistory.slice(-10));
+        // Filter out any messages with empty content to prevent provider errors
+        const history = this.conversationHistory
+            .slice(-10)
+            .filter(m => m.content && m.content.trim() !== '');
+
+        messages.push(...history);
 
         // Add current message if not already in history AND if it is valid
-        if (message && (!this.conversationHistory.length ||
-            this.conversationHistory[this.conversationHistory.length - 1].content !== message)) {
+        if (message && message.trim() !== '' && (!history.length ||
+            history[history.length - 1].content !== message)) {
             messages.push({ role: 'user', content: message });
         }
 
@@ -909,7 +990,7 @@ IMPORTANT RULES:
     }
 
     // Agent mode - specialized prompts for coding assistance
-    async analyzeCode(code, language) {
+    async analyzeCode(code, language, onTool = null) {
         const prompt = `Analyze this ${language} code and provide:
 1. Code quality assessment
 2. Potential bugs or issues
@@ -920,20 +1001,20 @@ IMPORTANT RULES:
 ${code}
 \`\`\``;
 
-        return await this.chat(prompt, 'You are an expert code reviewer and software architect.', false);
+        return await this.chat(prompt, 'You are an expert code reviewer and software architect.', false, onTool);
     }
 
-    async explainCode(code, language) {
+    async explainCode(code, language, onTool = null) {
         const prompt = `Explain this ${language} code in detail:
 
 \`\`\`${language}
 ${code}
 \`\`\``;
 
-        return await this.chat(prompt, 'You are an expert programming tutor. Explain code clearly and concisely.', false);
+        return await this.chat(prompt, 'You are an expert programming tutor. Explain code clearly and concisely.', false, onTool);
     }
 
-    async fixCode(code, language, issue) {
+    async fixCode(code, language, issue, onTool = null) {
         const prompt = `Fix this ${language} code. Issue: ${issue}
 
 \`\`\`${language}
@@ -942,35 +1023,35 @@ ${code}
 
 Provide the corrected code with explanations.`;
 
-        return await this.chat(prompt, 'You are an expert programmer. Fix code issues efficiently.', false);
+        return await this.chat(prompt, 'You are an expert programmer. Fix code issues efficiently.', false, onTool);
     }
 
-    async generateCode(description, language) {
+    async generateCode(description, language, onTool = null) {
         const prompt = `Generate ${language} code for: ${description}
 
 Provide clean, well-commented, production-ready code.`;
 
-        return await this.chat(prompt, 'You are an expert programmer. Write clean, efficient, and well-documented code.', false);
+        return await this.chat(prompt, 'You are an expert programmer. Write clean, efficient, and well-documented code.', false, onTool);
     }
 
-    async refactorCode(code, language) {
+    async refactorCode(code, language, onTool = null) {
         const prompt = `Refactor this ${language} code to improve quality, readability, and performance:
 
 \`\`\`${language}
 ${code}
 \`\`\``;
 
-        return await this.chat(prompt, 'You are an expert in code refactoring and software design patterns.', false);
+        return await this.chat(prompt, 'You are an expert in code refactoring and software design patterns.', false, onTool);
     }
 
-    async addComments(code, language) {
+    async addComments(code, language, onTool = null) {
         const prompt = `Add detailed comments to this ${language} code:
 
 \`\`\`${language}
 ${code}
 \`\`\``;
 
-        return await this.chat(prompt, 'You are an expert at writing clear and helpful code documentation.', false);
+        return await this.chat(prompt, 'You are an expert at writing clear and helpful code documentation.', false, onTool);
     }
 
     getAvailableProviders() {

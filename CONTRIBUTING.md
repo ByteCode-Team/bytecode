@@ -46,6 +46,7 @@ A clear description of what the bug is.
 
 **To Reproduce**
 Steps to reproduce:
+
 1. Go to '...'
 2. Click on '...'
 3. See error
@@ -57,8 +58,9 @@ What you expected to happen.
 If applicable, add screenshots.
 
 **Environment:**
+
 - OS: [e.g., Windows 11]
-- ByteCode Version: [e.g., 0.0.1]
+- ByteCode Version: [e.g., 0.0.2]
 - Node.js Version: [e.g., 18.0.0]
 ```
 
@@ -170,14 +172,14 @@ ByteCode/
 ```javascript
 // ✅ Good
 const getUserById = async (userId) => {
-    const user = await database.findUser(userId);
-    return user;
+  const user = await database.findUser(userId);
+  return user;
 };
 
 // ❌ Bad
 async function f(x) {
-    var u = await database.findUser(x);
-    return u;
+  var u = await database.findUser(x);
+  return u;
 }
 ```
 
@@ -191,12 +193,12 @@ async function f(x) {
 ```css
 /* ✅ Good */
 .sidebar-item {
-    background: var(--bg-card);
-    padding: 8px 12px;
+  background: var(--bg-card);
+  padding: 8px 12px;
 }
 
 .sidebar-item:hover {
-    background: var(--bg-light);
+  background: var(--bg-light);
 }
 ```
 

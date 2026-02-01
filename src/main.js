@@ -555,9 +555,93 @@ ipcMain.on('toggle-fullscreen', () => {
   }
 });
 
+// Terminal management with node-pty
+const pty = require('node-pty');
+const os = require('os');
+const terminals = new Map();
+
+ipcMain.on('terminal-create', (event, { id, cols, rows, cwd, shellPath }) => {
+  const defaultShell = os.platform() === 'win32' ? 'powershell.exe' : (process.env.SHELL || '/bin/bash');
+  const shell = shellPath || defaultShell;
+
+  try {
+    const ptyProcess = pty.spawn(shell, [], {
+      name: 'xterm-256color',
+      cols: cols || 80,
+      rows: rows || 24,
+      cwd: cwd || process.cwd(),
+      env: process.env
+    });
+
+    terminals.set(id, ptyProcess);
+
+    ptyProcess.onData((data) => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      mainWindow.webContents.send('terminal-incoming-data', { id, data });
+    });
+
+    ptyProcess.onExit(({ exitCode }) => {
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      mainWindow.webContents.send('terminal-exited', { id, exitCode });
+      terminals.delete(id);
+    });
+
+    // Handle flow control if needed, but basic piping is usually enough for local PTY
+  } catch (err) {
+    console.error('Failed to spawn terminal:', err);
+    event.reply('terminal-error', { id, error: err.message });
+  }
+});
+
+ipcMain.on('terminal-input', (event, { id, data }) => {
+  const ptyProcess = terminals.get(id);
+  if (ptyProcess) {
+    try {
+      ptyProcess.write(data);
+    } catch (err) {
+      // Ignore write errors (terminal might be closed)
+    }
+  }
+});
+
+ipcMain.on('terminal-resize', (event, { id, cols, rows }) => {
+  const ptyProcess = terminals.get(id);
+  if (ptyProcess) {
+    try {
+      ptyProcess.resize(cols, rows);
+    } catch (err) {
+      // Ignore resize errors
+    }
+  }
+});
+
+ipcMain.on('terminal-close', (event, { id }) => {
+  const ptyProcess = terminals.get(id);
+  if (ptyProcess) {
+    try {
+      ptyProcess.kill();
+    } catch (err) {
+      console.error(`Failed to kill terminal ${id}:`, err);
+    }
+    terminals.delete(id);
+  }
+});
+
+// Prevent crash on specific PTY errors
+process.on('uncaughtException', (err) => {
+  if (err.code === 'EPIPE' || err.message.includes('EPIPE')) {
+    // EPIPE errors can happen when writing to/reading from a closed PTY
+    // We can safely ignore them as the terminal is likely already closed
+    return;
+  }
+  // For other errors, log them or show dialog
+  console.error('Uncaught Exception:', err);
+  // Optional: dialog.showErrorBox if you want to keep default behavior for real crashes
+});
+
+// Deprecated: kept for backward compatibility if any other part uses it, but redirected to simple exec for non-interactive
 ipcMain.on('execute-terminal-command', (event, { command, cwd }) => {
   const { exec } = require('child_process');
-
   exec(command, { cwd: cwd, shell: true }, (error, stdout, stderr) => {
     event.reply('terminal-command-result', {
       error: error ? error.message : null,

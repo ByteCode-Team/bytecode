@@ -1,0 +1,26 @@
+{
+    "id": "live-server",
+    "name": "Live Server",
+    "version": "1.0.0",
+    "description": "Launch a local development server with live reload for static files.",
+    "author": {
+        "name": "ByteCode Team",
+        "url": "https://bytecode.dev"
+    },
+    "publisher": "ByteCode",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/bytecode/live-server"
+    },
+    "engines": {
+        "bytecode": "^1.0.0"
+    },
+    "categories": [
+        "Tools",
+        "Web"
+    ],
+    "main": "index.js",
+    "activationEvents": [
+        "onStartup"
+    ]
+}

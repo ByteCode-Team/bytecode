@@ -7,7 +7,7 @@ class ExtensionManager {
         this._fs = typeof fs !== 'undefined' ? fs : require('fs');
         this._path = typeof pathModule !== 'undefined' ? pathModule : require('path');
         this._ipc = typeof ipcRenderer !== 'undefined' ? ipcRenderer : require('electron').ipcRenderer;
-        
+
         this.extensions = new Map();
         this.hooks = {
             'editor:ready': [],
@@ -23,7 +23,7 @@ class ExtensionManager {
             'statusbar:init': [],
             'context:init': []
         };
-        
+
         this.api = this.createAPI();
         this.extensionsPath = this.getExtensionsPath();
         this.ensureExtensionsFolder();
@@ -219,14 +219,14 @@ class ExtensionManager {
                         const data = JSON.parse(localStorage.getItem(`bcext_${extId}`) || '{}');
                         data[key] = value;
                         localStorage.setItem(`bcext_${extId}`, JSON.stringify(data));
-                    } catch (e) {}
+                    } catch (e) { }
                 },
                 remove: (extId, key) => {
                     try {
                         const data = JSON.parse(localStorage.getItem(`bcext_${extId}`) || '{}');
                         delete data[key];
                         localStorage.setItem(`bcext_${extId}`, JSON.stringify(data));
-                    } catch (e) {}
+                    } catch (e) { }
                 }
             },
 
@@ -261,7 +261,7 @@ class ExtensionManager {
             }
 
             const manifest = JSON.parse(this._fs.readFileSync(manifestPath, 'utf8'));
-            
+
             if (!manifest.id || !manifest.name || !manifest.main) {
                 console.error('Invalid extension manifest:', extPath);
                 return false;
@@ -281,7 +281,7 @@ class ExtensionManager {
             }
 
             const code = this._fs.readFileSync(mainPath, 'utf8');
-            
+
             // Create sandboxed context for extension
             const extensionContext = {
                 bytecode: this.api,
@@ -308,7 +308,7 @@ class ExtensionManager {
             // Execute extension code
             const extensionFn = new Function(...Object.keys(extensionContext), code);
             const extensionExports = {};
-            
+
             try {
                 extensionFn.call(extensionExports, ...Object.values(extensionContext));
             } catch (e) {
@@ -339,15 +339,29 @@ class ExtensionManager {
             this.extensionsPath,
             this._path.join(process.cwd(), 'extensions') // Also check project folder
         ];
-        
+
+        // Get list of disabled extensions from localStorage
+        let disabledExtensions = [];
+        try {
+            disabledExtensions = JSON.parse(localStorage.getItem('bytecode-disabled-extensions') || '[]');
+        } catch (e) {
+            disabledExtensions = [];
+        }
+
         for (const extFolder of pathsToCheck) {
             if (!this._fs.existsSync(extFolder)) continue;
-            
+
             try {
                 const entries = this._fs.readdirSync(extFolder, { withFileTypes: true });
-                
+
                 for (const entry of entries) {
                     if (entry.isDirectory()) {
+                        // Skip disabled extensions
+                        if (disabledExtensions.includes(entry.name)) {
+                            console.log(`Skipping disabled extension: ${entry.name}`);
+                            continue;
+                        }
+
                         const extPath = this._path.join(extFolder, entry.name);
                         await this.loadExtension(extPath);
                     }
@@ -365,7 +379,7 @@ class ExtensionManager {
         try {
             const AdmZip = require('adm-zip');
             const zip = new AdmZip(bcextPath);
-            
+
             // Read manifest from zip
             const manifestEntry = zip.getEntry('manifest.json');
             if (!manifestEntry) {
@@ -373,20 +387,55 @@ class ExtensionManager {
             }
 
             const manifest = JSON.parse(manifestEntry.getData().toString('utf8'));
-            
+
             if (!manifest.id || !manifest.name) {
                 throw new Error('Invalid manifest: missing id or name');
             }
 
             // Extract to extensions folder
             const extPath = this._path.join(this.extensionsPath, manifest.id);
-            
+
             if (this._fs.existsSync(extPath)) {
                 // Update existing
                 this._fs.rmSync(extPath, { recursive: true });
             }
 
             zip.extractAllTo(extPath, true);
+
+            // Check for dependencies and install them
+            if (manifest.dependencies || manifest.devDependencies) {
+                const packageJsonPath = this._path.join(extPath, 'package.json');
+
+                // If package.json doesn't exist, create one from manifest
+                if (!this._fs.existsSync(packageJsonPath)) {
+                    const packageJson = {
+                        name: manifest.id,
+                        version: manifest.version,
+                        dependencies: manifest.dependencies || {},
+                        devDependencies: manifest.devDependencies || {}
+                    };
+                    this._fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+                }
+
+                this.showNotification(`Installing dependencies for ${manifest.name}...`, 'info');
+
+                await new Promise((resolve, reject) => {
+                    const { exec } = require('child_process');
+                    // Run npm install in the extension directory
+                    // We install both dependencies and devDependencies as requested
+                    exec('npm install', { cwd: extPath }, (error, stdout, stderr) => {
+                        if (error) {
+                            console.error(`npm install error: ${error.message}`);
+                            // We don't block installation on npm error, but we warn
+                            this.showNotification(`Failed to install dependencies: ${error.message}`, 'error');
+                            resolve(); // Continue anyway
+                        } else {
+                            console.log(`Dependencies installed for ${manifest.name}`);
+                            resolve();
+                        }
+                    });
+                });
+            }
 
             // Load the extension
             await this.loadExtension(extPath);
@@ -443,16 +492,16 @@ class ExtensionManager {
     // UI Helpers
     showNotification(message, type = 'info') {
         const container = document.getElementById('notification-container') || this.createNotificationContainer();
-        
+
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
         notification.innerHTML = `
             <span>${message}</span>
             <button onclick="this.parentElement.remove()">×</button>
         `;
-        
+
         container.appendChild(notification);
-        
+
         setTimeout(() => notification.remove(), 5000);
     }
 
@@ -481,7 +530,7 @@ class ExtensionManager {
         item.className = 'statusbar-item ext-statusbar-item';
         item.textContent = text;
         item.style.cursor = onClick ? 'pointer' : 'default';
-        
+
         if (onClick) {
             item.addEventListener('click', onClick);
         }

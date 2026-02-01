@@ -4,24 +4,48 @@
 
 ByteCode extensions are ZIP files renamed to `.bcext` containing:
 
-- `manifest.json` - Extension metadata
-- `index.js` - Main extension code
-- Other JS files if needed
+- `manifest.json` - Extension metadata (Required)
+- `index.js` - Main extension code (Required)
+- `README.md` - Extension documentation (Recommended)
+- `icon.png` - Extension icon (Recommended)
+- Other JS/CSS/Asset files if needed
 
 ## manifest.json Structure
 
+Your `manifest.json` is the source of truth for your extension. It should follow this schema:
+
 ```json
 {
-  "id": "my-extension",
-  "name": "My Extension",
+  "id": "my-extension-id",
+  "name": "My Extension Name",
   "version": "1.0.0",
-  "description": "Extension description",
-  "author": "Your name",
-  "main": "index.js"
+  "description": "A short description of what your extension does.",
+  "author": {
+    "name": "Your Name",
+    "email": "you@example.com",
+    "url": "https://yourwebsite.com"
+  },
+  "publisher": "YourPublisherName",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/repo"
+  },
+  "engines": {
+    "bytecode": "^1.0.0"
+  },
+  "main": "index.js",
+  "icon": "icon.png",
+  "categories": ["Themes", "Tools", "Languages"],
+  "dependencies": {
+    "some-other-extension": "^1.0.0"
+  },
+  "activationEvents": ["onStartup", "onCommand:extension.helloWorld"]
 }
 ```
 
 ## Available API (bytecode object)
+
+Access the full power of ByteCode via the global `bytecode` object.
 
 ### Editor API
 
@@ -110,42 +134,54 @@ bytecode.utils.path; // Node.js path module
 bytecode.utils.fs; // Node.js fs module
 ```
 
-## Complete Example
+## Creating a .bcext Package
 
-```javascript
-// manifest.json
-{
-    "id": "word-counter",
-    "name": "Word Counter",
-    "version": "1.0.0",
-    "description": "Counts words in the current file",
-    "author": "ByteCode",
-    "main": "index.js"
-}
+To share your extension, you need to package it into a `.bcext` file.
 
-// index.js
-bytecode.ui.addStatusBarItem('word-count', 'Words: 0', () => {
-    const content = bytecode.editor.getValue();
-    const words = content.trim().split(/\s+/).filter(w => w).length;
-    bytecode.ui.showNotification(`${words} words in this file`, 'info');
-});
+### Manual Method
 
-bytecode.hooks.on('editor:change', () => {
-    const content = bytecode.editor.getValue();
-    const words = content.trim().split(/\s+/).filter(w => w).length;
-    bytecode.ui.updateStatusBarItem('word-count', `Words: ${words}`);
-});
-```
+1. Select all files in your extension folder (`manifest.json`, `index.js`, etc.)
+2. Zip them into an archive.
+3. Rename `.zip` to `.bcext`.
 
-## Installation
+### Automated Method (Recommended)
 
-1. Place your extension folder in `extensions/`
-2. Or create a `.bcext` file (ZIP) and use the Extensions > Install menu
-3. Restart ByteCode
-
-## Creating a .bcext
+You can use the built-in build tool:
 
 ```bash
-cd my-extension
-zip -r ../my-extension.bcext manifest.json index.js
+node tools/build-extension.js <path-to-extension-folder>
+```
+
+Example:
+
+```bash
+node tools/build-extension.js extensions/live-server
+```
+
+This will generate `live-server.bcext` in the `dist-extensions` folder.
+
+---
+
+## Extension SDK / CLI (bcext)
+
+We provide a CLI to scaffold, validate, and build extensions.
+
+### Install (dev)
+
+```bash
+cd tools/bcext-cli
+npm link
+```
+
+### Commands
+
+```bash
+# Create a new extension scaffold
+bcext init my-extension --id my-extension --name "My Extension"
+
+# Validate manifest + entry file
+bcext validate ./my-extension
+
+# Build a .bcext package (outputs to ./my-extension/dist)
+bcext build ./my-extension
 ```

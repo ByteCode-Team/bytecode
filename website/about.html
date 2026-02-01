@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About ByteCode - Modern Code Editor</title>
+    <meta name="description"
+        content="Learn more about ByteCode IDE, our mission, and our commitment to the developer community.">
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .about-hero {
+            padding: 120px 0 60px;
+            text-align: center;
+            background: radial-gradient(circle at top center, rgba(88, 101, 242, 0.1) 0%, transparent 70%);
+        }
+
+        .about-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px 100px;
+            line-height: 1.6;
+        }
+
+        .about-section {
+            margin-bottom: 60px;
+        }
+
+        .about-section h2 {
+            font-size: 2.5rem;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, #fff 0%, #a5a5a5 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .about-section p {
+            font-size: 1.1rem;
+            color: #b9bbbe;
+            margin-bottom: 20px;
+        }
+
+        .legal-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 40px;
+        }
+
+        .legal-box h3 {
+            color: #fff;
+            margin-bottom: 16px;
+            font-size: 1.3rem;
+        }
+
+        .legal-box p {
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+        }
+
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-top: 32px;
+        }
+
+        .team-member {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .team-member:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .team-member h4 {
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .team-member span {
+            color: #5865f2;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">
+                <img src="assets/iconname.png" alt="ByteCode">
+                <span>ByteCode</span>
+            </a>
+            <div class="nav-links">
+                <a href="index.html#features">Features</a>
+                <a href="index.html#ai">AI Assistant</a>
+                <a href="docs.html">Documentation</a>
+                <a href="index.html#download" class="nav-btn">Download</a>
+            </div>
+        </div>
+    </nav>
+
+    <header class="about-hero">
+        <div class="container">
+            <h1>About <span class="gradient-text">ByteCode</span></h1>
+            <p class="hero-subtitle">The story behind the next-generation code editor.</p>
+        </div>
+    </header>
+
+    <main class="about-content">
+        <section class="about-section">
+            <h2>Our Mission</h2>
+            <p>ByteCode was born from a simple idea: making development faster, smarter, and more accessible without the
+                bloat of traditional IDEs. We believe that an editor should be an extension of the developer's mind,
+                providing the right tools at the right time.</p>
+            <p>By combining the robust foundation of the Monaco Editor with cutting-edge AI technology, we've created a
+                workspace where creativity flows uninterrupted.</p>
+        </section>
+
+        <section class="about-section">
+            <h2>The Technology</h2>
+            <p>ByteCode is built on top of industry-standard technologies to ensure stability and performance:</p>
+            <ul>
+                <li><strong>Electron:</strong> Providing a native desktop experience on Windows.</li>
+                <li><strong>Monaco Editor:</strong> The same powerful engine that drives VS Code, ensuring
+                    high-performance syntax highlighting and IntelliSense.</li>
+                <li><strong>Built-in AI:</strong> Seamless integration with top-tier AI providers for real-time coding
+                    assistance.</li>
+                <li><strong>Extension API:</strong> A simplified, flexible system for community-driven enhancements.
+                </li>
+            </ul>
+        </section>
+
+        <section class="about-section">
+            <h2>The Team</h2>
+            <p>ByteCode is a passion project developed by a dedicated group of contributors known as the
+                <strong>ByteCode Team</strong>.
+            </p>
+            <div class="team-grid">
+                <div class="team-member">
+                    <h4>Lololegeek</h4>
+                    <span>Founder & Lead Developer</span>
+                </div>
+                <div class="team-member">
+                    <h4>ByteCode-Team</h4>
+                    <span>Contributors</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="legal-box">
+            <h3>Legal Disclaimer</h3>
+            <p><strong>ByteCode IDE</strong> is an independent software project. We are <strong>NOT</strong> affiliated,
+                associated, authorized, endorsed by, or in any way officially connected with the <strong>Bytecode
+                    Alliance</strong>, <strong>Microsoft Corporation</strong> (Visual Studio Code), or any of their
+                subsidiaries or affiliates.</p>
+            <p>The name "ByteCode" is used descriptively as a generic technical term in the context of this project. All
+                trademarks and registered trademarks are the property of their respective owners.</p>
+            <p>This software is provided "as is", without warranty of any kind, under the <strong>MIT License</strong>.
+            </p>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="assets/iconname.png" alt="ByteCode">
+                    <p>A modern IDE for modern developers.<br>Built with ❤️ by the ByteCode Team.</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-col">
+                        <h4>Product</h4>
+                        <a href="index.html#features">Features</a>
+                        <a href="index.html#download">Download</a>
+                        <a href="docs.html">Documentation</a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Resources</h4>
+                        <a href="docs.html#extensions">Extensions</a>
+                        <a href="docs.html#api">API Reference</a>
+                        <a href="docs.html#ai">AI Setup</a>
+                    </div>
+                    <div class="footer-col">
+                        <h4>Community</h4>
+                        <a href="https://github.com/ByteCode-Team/bytecode">GitHub</a>
+                        <a href="https://github.com/ByteCode-Team/bytecode/issues">Issues</a>
+                        <a href="about.html">About Us</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2024-2025 ByteCode Team. Open source under MIT License.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+
+</html>

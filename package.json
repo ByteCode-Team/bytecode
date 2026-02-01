@@ -1,6 +1,6 @@
 {
   "name": "bytecode",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "preview": true,
   "description": "A no VS Code based IDE by the ByteCode-Team. Thanks to Lololegeek, is the foundator of ByteCode-Team and ByteCode",
   "displayName": "ByteCode",
@@ -51,7 +51,9 @@
     "axios": "^1.6.0",
     "marked": "^11.0.0",
     "monaco-editor": "^0.44.0",
-    "node-pty": "^1.0.0"
+    "node-pty": "^1.0.0",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
   },
   "devDependencies": {
     "electron": "^27.0.0",

@@ -1,0 +1,8 @@
+{
+    "id": "prettier-format",
+    "name": "Prettier Formatter",
+    "version": "2.1.0",
+    "description": "Code formatter for consistent style. Formats code on save.",
+    "author": "Prettier",
+    "main": "index.js"
+}

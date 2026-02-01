@@ -1,0 +1,8 @@
+{
+    "id": "git-lens",
+    "name": "GitLens",
+    "version": "0.1.0",
+    "description": "Supercharge Git capabilities. Visualize code authorship.",
+    "author": "GitKraken",
+    "main": "index.js"
+}

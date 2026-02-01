@@ -1346,11 +1346,14 @@ function toggleAIPanel() {
 }
 
 function clearAIChat() {
-    if (confirm(t('aiClearConfirm'))) {
+    if (confirm(t('aiClearConfirm') || 'Clear chat history?')) {
         const container = document.getElementById('ai-chat-container');
+        const input = document.getElementById('ai-input');
+        const sendBtn = document.querySelector('.ai-send-btn');
+
         container.innerHTML = `
             <div class="ai-welcome">
-                <div class="ai-icon">${fileIcons.ai || ''}</div>
+                <div class="ai-icon">${(typeof fileIcons !== 'undefined' && fileIcons.ai) || '🤖'}</div>
                 <h3 id="ai-welcome-title">${t('aiWelcomeTitle')}</h3>
                 <p id="ai-welcome-subtitle">${t('aiWelcomeSubtitle')}</p>
                 <div class="ai-quick-actions">
@@ -1369,13 +1372,20 @@ function clearAIChat() {
                 </div>
             </div>
         `;
-        if (aiManager) {
-            aiManager.clearHistory();
+
+        if (aiManager) aiManager.clearHistory();
+
+        // Unlock everything
+        if (input) {
+            input.disabled = false;
+            input.placeholder = "Ask AI...";
+            input.value = '';
         }
+        if (sendBtn) sendBtn.disabled = false;
     }
 }
 
-function addAIMessage(content, type = 'assistant') {
+function addAIMessage(content, type = 'assistant', toolCall = null) {
     const container = document.getElementById('ai-chat-container');
 
     // Remove welcome screen if present
@@ -1398,11 +1408,27 @@ function addAIMessage(content, type = 'assistant') {
                 </div>
             </div>
         `;
+    } else if (type === 'system' && toolCall) {
+        // Simple display in chat, controls are in the global pending bar
+        const escapedContent = (content || '').toString()
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+        messageDiv.innerHTML = `
+            <div class="ai-message-header">System - Tool Execution</div>
+            <div class="ai-message-content" style="background: rgba(0, 122, 204, 0.1); border-left: 2px solid #007acc; padding: 6px 10px; border-radius: 4px;">
+                <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 11px;">Tool: ${toolCall.tool}</p>
+                <div class="ai-tool-raw-output" style="font-family: 'Fira Code', monospace; font-size: 10px; max-height: 100px; overflow: auto; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 3px; white-space: pre;">${escapedContent.length > 2000 ? escapedContent.substring(0, 2000) + '\n... (truncated)' : escapedContent}</div>
+            </div>
+        `;
     } else {
         const header = type === 'user' ? 'You' : (type === 'error' ? t('aiError') : 'AI');
         messageDiv.innerHTML = `
             <div class="ai-message-header">${header}</div>
-            <div class="ai-message-content">${formatAIMessage(content)}</div>
+            <div class="ai-message-content" style="${type === 'system' ? 'font-style: italic; opacity: 0.8;' : ''}">${formatAIMessage(content)}</div>
         `;
     }
 
@@ -1411,6 +1437,70 @@ function addAIMessage(content, type = 'assistant') {
 
     return messageDiv;
 }
+
+// Global state for tool confirmation
+let pendingActionResolve = null;
+let aiAutoAcceptAll = false;
+
+// Function to show tool results with a global Accept/Revert bar at the bottom
+window.showToolResult = async function (toolCall, result) {
+    const isError = result && result.includes('Tool Execution Error');
+    const isReadOnly = ['read_file', 'list_files'].includes(toolCall.tool);
+
+    // 1. Show result in chat first
+    addAIMessage(result, 'system', toolCall);
+
+    // 2. Auto-accept if applicable
+    if (aiAutoAcceptAll || isReadOnly || isError) {
+        return true;
+    }
+
+    // 2. Show the change in chat
+    addAIMessage(result, 'system', toolCall);
+
+    // 3. Show global pending bar
+    const bar = document.getElementById('ai-pending-bar');
+    const text = document.getElementById('ai-pending-text');
+    const btnAccept = document.getElementById('ai-btn-accept');
+    const btnReject = document.getElementById('ai-btn-reject');
+
+    // Ensure "Accept All" exists or just repurpose Accept for now.
+    // Let's add a dedicated Accept All button in the HTML via JS if missing or just use it.
+
+    if (bar) {
+        bar.style.display = 'flex';
+        text.textContent = `Applied ${toolCall.tool}. Accept changes or Revert?`;
+    }
+
+    if (window.currentFolder) ipcRenderer.send('load-folder-contents', window.currentFolder.path);
+
+    return new Promise((resolve) => {
+        let btnAcceptAll = document.getElementById('ai-btn-accept-all');
+        if (!btnAcceptAll && bar) {
+            btnAcceptAll = document.createElement('button');
+            btnAcceptAll.id = 'ai-btn-accept-all';
+            btnAcceptAll.className = 'ai-pending-btn success';
+            btnAcceptAll.style.background = '#007acc';
+            btnAcceptAll.innerHTML = '<span>✔️</span> Accept All';
+            bar.querySelector('.ai-pending-btns').insertBefore(btnAcceptAll, btnAccept);
+        }
+
+        const onAccept = () => { cleanup(); resolve(true); };
+        const onAcceptAll = () => { aiAutoAcceptAll = true; cleanup(); resolve(true); };
+        const onReject = () => { aiAutoAcceptAll = false; cleanup(); resolve(false); };
+
+        const cleanup = () => {
+            bar.style.display = 'none';
+            btnAccept.removeEventListener('click', onAccept);
+            btnReject.removeEventListener('click', onReject);
+            if (btnAcceptAll) btnAcceptAll.removeEventListener('click', onAcceptAll);
+        };
+
+        btnAccept.addEventListener('click', onAccept);
+        btnReject.addEventListener('click', onReject);
+        if (btnAcceptAll) btnAcceptAll.addEventListener('click', onAcceptAll);
+    });
+};
 
 function formatAIMessage(content) {
     try {
@@ -1438,9 +1528,12 @@ function formatAIMessage(content) {
 
 async function sendAIMessage() {
     const input = document.getElementById('ai-input');
-    const message = input.value.trim();
+    const message = input ? input.value.trim() : '';
 
     if (!message) return;
+
+    // Reset auto-accept for this new turn
+    aiAutoAcceptAll = false;
 
     if (!aiManager) {
         addAIMessage(t('aiProviderNotConfigured'), 'error');
@@ -1480,10 +1573,34 @@ async function sendAIMessage() {
     // Show loading
     const loadingMsg = addAIMessage(t('aiThinking'), 'loading');
 
+    // Disable input while AI is thinking
+    if (input) {
+        input.disabled = true;
+        input.placeholder = "AI is thinking...";
+    }
+    const sendBtn = document.querySelector('.ai-send-btn');
+    if (sendBtn) sendBtn.disabled = true;
+
     try {
-        const response = await aiManager.chat(messageToSend);
+        const response = await aiManager.chat(messageToSend, null, true, (toolCall, fullResponse) => {
+            // This is called when the AI decides to use a tool
+            // We can show the AI's preamble if it exists and wasn't just JSON
+            const preamble = fullResponse.replace(JSON.stringify(toolCall), '').trim();
+            if (preamble && preamble.length > 5 && !preamble.startsWith('```')) {
+                addAIMessage(preamble, 'assistant');
+            }
+
+            // Show that a tool is being used (simple info)
+            // addAIMessage(`🔧 *Using tool: ${toolCall.tool}*`, 'system'); // Removed duplicate
+
+            // Re-show thinking for the next iteration
+            loadingMsg.textContent = `${t('aiThinking')} (${toolCall.tool})...`;
+        });
+
         loadingMsg.remove();
-        addAIMessage(response, 'assistant');
+        if (response) {
+            addAIMessage(response, 'assistant');
+        }
     } catch (error) {
         console.error('AI Error:', error);
         loadingMsg.remove();
@@ -1499,6 +1616,14 @@ async function sendAIMessage() {
         }
 
         addAIMessage(errorMsg, 'error');
+    } finally {
+        // ALWAYS re-enable input
+        if (input) {
+            input.disabled = false;
+            input.placeholder = "Ask AI...";
+            input.focus();
+        }
+        if (sendBtn) sendBtn.disabled = false;
     }
 }
 
@@ -1531,31 +1656,58 @@ async function aiQuickAction(action) {
     // Show loading
     const loadingMsg = addAIMessage(t('aiThinking'), 'loading');
 
+    // Disable input while AI is thinking
+    const input = document.getElementById('ai-input');
+    if (input) {
+        input.disabled = true;
+        input.placeholder = "AI is thinking...";
+    }
+    const sendBtn = document.querySelector('.ai-send-btn');
+    if (sendBtn) sendBtn.disabled = true;
+
+    const onTool = (toolCall, fullResponse) => {
+        const preamble = fullResponse.replace(JSON.stringify(toolCall), '').trim();
+        if (preamble && preamble.length > 5 && !preamble.startsWith('```')) {
+            addAIMessage(preamble, 'assistant');
+        }
+        // addAIMessage(`🔧 *Using tool: ${toolCall.tool}*`, 'system'); // Removed duplicate
+        loadingMsg.textContent = `${t('aiThinking')} (${toolCall.tool})...`;
+    };
+
     try {
         let response;
         switch (action) {
             case 'explain':
-                response = await aiManager.explainCode(code, language);
+                response = await aiManager.explainCode(code, language, onTool);
                 break;
             case 'fix':
-                response = await aiManager.fixCode(code, language, 'Find and fix any issues');
+                response = await aiManager.fixCode(code, language, 'Find and fix any issues', onTool);
                 break;
             case 'refactor':
-                response = await aiManager.refactorCode(code, language);
+                response = await aiManager.refactorCode(code, language, onTool);
                 break;
             case 'comment':
-                response = await aiManager.addComments(code, language);
+                response = await aiManager.addComments(code, language, onTool);
                 break;
         }
 
         loadingMsg.remove();
-        addAIMessage(response, 'assistant');
+        if (response) {
+            addAIMessage(response, 'assistant');
+        }
     } catch (error) {
         console.error('AI Quick Action Error:', error);
         loadingMsg.remove();
 
         let errorMsg = error.message || 'Failed to process request';
         addAIMessage(errorMsg, 'error');
+    } finally {
+        // ALWAYS re-enable
+        if (input) {
+            input.disabled = false;
+            input.placeholder = "Ask AI...";
+        }
+        if (sendBtn) sendBtn.disabled = false;
     }
 }
 
@@ -1768,3 +1920,132 @@ setTimeout(initializeAI, 1000);
 // Debug: log when script is fully loaded
 console.log('ByteCode renderer.js loaded successfully');
 console.log('Available functions:', Object.keys(window).filter(k => typeof window[k] === 'function' && ['createNewFile', 'openFile', 'openFolder'].includes(k)));
+
+// --- ByteCode OneShot Fix: Enhanced Terminal Integration ---
+// Override toggleTerminal to work with new xterm manager
+window.toggleTerminal = function () {
+    const container = document.getElementById('terminal-container');
+    if (!container) return;
+
+    // Check if currently visible
+    const isVisible = container.style.display === 'flex';
+
+    if (!isVisible) {
+        container.style.display = 'flex';
+        // Initialize if not exists
+        if (!window.terminalManager) {
+            // Check if TerminalManager is valid
+            if (window.TerminalManager) {
+                // Clear any existing content if we are re-initializing
+                // container.innerHTML = ''; // TerminalManager init does this
+                window.terminalManager = new window.TerminalManager(container);
+            } else {
+                console.error('TerminalManager not defined');
+                return;
+            }
+        }
+
+        // Focus
+        if (window.terminalManager) {
+            // Need a small timeout for xterm to pick up dimensions after display:flex
+            setTimeout(() => {
+                if (window.terminalManager.fitActiveTerminal) {
+                    window.terminalManager.fitActiveTerminal();
+                }
+                window.terminalManager.focus();
+            }, 50);
+        }
+
+        if (typeof editor !== 'undefined' && editor && editor.layout) editor.layout();
+    } else {
+        container.style.display = 'none';
+        if (typeof editor !== 'undefined' && editor) {
+            editor.layout();
+            editor.focus();
+        }
+    }
+};
+
+// About Modal Functions
+window.showAboutModal = function () {
+    const modal = document.getElementById('about-modal');
+    if (!modal) return;
+
+    // Update translations in modal
+    document.getElementById('about-title-text').textContent = t('aboutByteCode');
+    document.getElementById('about-version-text').textContent = "Version 0.0.2";
+
+    // Re-use aboutDetail but strip version
+    const aboutDetail = t('aboutDetail');
+    const desc = aboutDetail.split('\n\n').find(p => p.includes('modern IDE')) || t('welcomeSubtitle');
+    document.getElementById('about-desc-text').textContent = desc;
+
+    modal.style.display = 'flex';
+};
+
+window.closeAboutModal = function () {
+    const modal = document.getElementById('about-modal');
+    if (modal) modal.style.display = 'none';
+};
+
+// Intercept 'show-about' from main process to show our custom modal
+ipcRenderer.on('show-about', () => {
+    window.showAboutModal();
+});
+
+// Update UIText to include about modal texts
+const originalUpdateUIText = window.updateUIText || function () { };
+window.updateUIText = function () {
+    originalUpdateUIText();
+    const aboutTitle = document.getElementById('about-title-text');
+    if (aboutTitle) aboutTitle.textContent = t('aboutByteCode');
+
+    // Update tool result button text if they exist
+    document.querySelectorAll('.ai-tool-confirm, .ai-tool-reject').forEach(btn => {
+        if (btn.classList.contains('ai-tool-confirm')) btn.textContent = t('accept') || 'Accept';
+        if (btn.classList.contains('ai-tool-reject')) btn.textContent = t('reject') || 'Reject';
+    });
+};
+
+// Function to show tool results with Accept/Reject buttons
+window.showToolResult = async function (toolCall, result) {
+    // Refresh folder tree before showing result so the user sees the file appeared/changed
+    if (window.currentFolder) ipcRenderer.send('load-folder-contents', window.currentFolder.path);
+
+    const messageDiv = addAIMessage(result, 'system', toolCall);
+    return await messageDiv.confirmPromise;
+};
+
+// Fixed clearAIChat to unlock input
+window.clearAIChat = function () {
+    if (confirm(t('aiClearConfirm') || 'Clear chat history?')) {
+        const container = document.getElementById('ai-chat-container');
+        const input = document.getElementById('ai-input');
+        const sendBtn = document.querySelector('.ai-send-btn');
+
+        container.innerHTML = '';
+        if (aiManager) aiManager.clearHistory();
+
+        // Unlock everything
+        if (input) {
+            input.disabled = false;
+            input.placeholder = "Ask AI...";
+            input.value = '';
+        }
+        if (sendBtn) sendBtn.disabled = false;
+
+        // Re-add welcome
+        addAIMessage(t('welcomeSubtitle'), 'assistant');
+    }
+};
+
+// Ensure toggle-terminal IPC calls our new function
+// We add a new listener. If an old one exists, it runs too, but since we updated window.toggleTerminal, it should be fine.
+// But valid concern: if old listener manually manipulates DOM, it might conflict.
+// Given we replaced the whole backend terminal logic, the old frontend logic (if any specific DOM manipulation existed in the listener) might break.
+// However, the standard pattern in this app seems to be calling global functions.
+ipcRenderer.on('toggle-terminal', () => {
+    window.toggleTerminal();
+});
+
+// Auto-init terminal if invisible to ensure it's ready? No, wait for user.

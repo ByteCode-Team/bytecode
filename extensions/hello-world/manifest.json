@@ -1,0 +1,16 @@
+{
+  "id": "hello-world",
+  "name": "Hello World",
+  "version": "0.1.0",
+  "description": "Describe your extension here.",
+  "author": {
+    "name": "Your Name"
+  },
+  "engines": {
+    "bytecode": "^0.0.2"
+  },
+  "main": "index.js",
+  "activationEvents": [
+    "onStartup"
+  ]
+}

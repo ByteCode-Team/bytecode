@@ -1,0 +1,12 @@
+{
+  "name": "bcext-cli",
+  "version": "0.1.0",
+  "description": "ByteCode extension SDK/CLI (init/build/validate)",
+  "license": "MIT",
+  "bin": {
+    "bcext": "bin/bcext.js"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16"
+  }
+}
