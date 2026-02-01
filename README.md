@@ -138,7 +138,7 @@ See the [extensions documentation](extensions/README.md) for more details.
 - **Electron** - Cross-platform desktop app framework
 - **Monaco Editor** - The code editor that powers VS Code
 - **Node.js** - JavaScript runtime
-- **xterm.js** - Terminal emulation
+- **node-pty** - Your PC Terminal in ByteCode
 
 ## 📝 License
 
